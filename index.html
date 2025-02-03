@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gh3 Browser</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="main-container">
+        <div id="sidebar">
+            <div class="nav-controls">
+                <div>
+                    <button id="back">←</button>
+                    <button id="forward">→</button>
+                </div>
+                <button id="reload">⟳</button>
+            </div>
+            <div class="url-container">
+                <input type="text" id="url-bar" placeholder="Cerca o inserisci URL..." />
+            </div>
+            <div id="tab-list"></div>
+            <button id="new-tab"></button>
+        </div>
+        <div id="browser-container">
+        </div>
+        <div id="search-float">
+            <input type="text" id="search-input" placeholder="Cerca o inserisci URL..." />
+        </div>
+    </div>
+
+    <script type="module" src="./dist/renderer.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,19 @@
+{
+    "name": "gh3b",
+    "version": "1.0.0",
+    "main": "src/main.ts",
+    "scripts": {
+        "start": "tsc && electron ./dist/main.js",
+        "build": "tsc"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "description": "",
+    "devDependencies": {
+        "@types/electron": "^1.4.38",
+        "@types/node": "^22.13.0",
+        "electron": "^34.0.2",
+        "typescript": "^5.7.3"
+    }
+}

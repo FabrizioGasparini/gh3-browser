@@ -1,0 +1,318 @@
+/* Generale */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+html, body {
+    height: 100%;
+}
+
+body {
+    background-color: #181818;
+    color: #eaeaea;
+}
+
+/* Contenitore principale */
+.main-container {
+    display: flex;
+    justify-content: flex-start;
+    align-items: stretch;
+    height: 100%;
+}
+
+/* Sidebar */
+#sidebar {
+    width: 250px;
+    background-color: #1e1e1e;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    transition: left 0.3s ease;
+}
+
+/* Sidebar */
+#sidebar.floating {
+    position: fixed;
+    top: 0;
+    left: -250px;
+    transition: left 0.3s ease;
+}
+
+/* Quando la sidebar è visibile */
+#sidebar.visible {
+    left: 0; /* Porta la sidebar alla posizione visibile */
+}
+
+
+/* Controlli di navigazione */
+.nav-controls {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.nav-controls button {
+    background-color: transparent;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    aspect-ratio: 1;
+    width: 32px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.nav-controls button:hover {
+    background-color: #363636;
+}
+
+.nav-controls button:focus {
+    outline: none;
+}
+
+/* Barra URL */
+.url-container {
+    margin-bottom: 20px;
+}
+
+#url-bar {
+    width: 100%;
+    padding: 8px;
+    font-size: 14px;
+    border: 1px solid #333;
+    background-color: #222;
+    color: #fff;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+}
+
+#url-bar:focus {
+    background-color: #333;
+    outline: none;
+}
+
+/* Lista delle tab */
+#tab-list {
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: 2px;
+}
+
+/* Tab */
+.tab {
+    display: flex;
+    align-items: center;
+    background-color: transparent;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    transition: background-color 0.2s, transform 0.2s;
+    cursor: pointer;
+}
+
+.tab:hover {
+    background-color: #444;
+    transform: scale(1.02);
+}
+
+/* Icona della tab */
+.tab-image {
+    width: 20px;
+    height: 20px;
+    object-fit: cover;
+    margin-right: 10px;
+}
+
+/* Titolo della tab */
+.tab-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #ddd;
+    flex-grow: 1;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+/* Pulsante di chiusura della tab */
+.tab-close {
+    background-color: transparent;
+    color: white;
+    font-size: 16px;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 5px;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.tab:hover .tab-close {
+    display: flex;
+}
+
+/* Hover del pulsante di chiusura */
+.tab-close:hover {
+    background-color: #c0392b;
+}
+
+/* Stile per la tab attiva (selezionata) */
+.tab.active {
+    background-color: #5e2a84; /* Colore violetto quando è attiva */
+}
+
+.tab.active .tab-title {
+    font-weight: bold;
+    color: white;
+}
+
+
+/* Nuova tab */
+#new-tab {
+    background-color: #5c6bc0;
+    color: white;
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 20px;
+}
+
+#new-tab:hover {
+    background-color: #3f51b5;
+}
+
+/* Contenitore browser */
+#browser-container {
+    flex-grow: 1;
+    background-color: #121212;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: margin-left 0.3s ease;
+}
+
+#browser-container iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* Ricerca fluttuante */
+#search-float {
+    display: none;
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #333;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+#search-float.active {
+    display: block;
+}
+
+#search-input {
+    width: 500px;
+    padding: 10px;
+    font-size: 16px;
+    border: none;
+    border-radius: 4px;
+    background-color: #222;
+    color: white;
+}
+
+#search-input:focus {
+    outline: none;
+    background-color: #444;
+}
+
+/* Temi e colori */
+.theme-dark {
+    background-color: #181818;
+    color: #eaeaea;
+}
+
+.theme-violet {
+    background-color: #5e2a84;
+    color: #ffffff;
+}
+
+webview {
+    width: 100%;
+    height: 100%;
+    display: none;
+}
+
+webview.active {
+    display: flex;
+}
+
+
+
+
+#title-bar {
+    width: 100%;
+    height: 40px;
+    background-color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 10px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    color: white;
+}
+
+#title-bar button {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 5px;
+    transition: all 0.3s;
+}
+
+#title-bar button:hover {
+    background-color: #444;
+}
+
+#window-controls {
+    display: flex;
+    gap: 5px;
+}
+
+#window-controls button {
+    font-size: 16px;
+    padding: 5px;
+}
+
+#menu-btn {
+    font-size: 20px;
+}
+
+#toggle-sidebar-btn {
+    font-size: 20px;
+}
+
+#back-btn, #forward-btn, #reload-btn {
+    font-size: 18px;
+}

@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES6",                          // Versione ECMAScript di destinazione
+    "module": "commonjs",                     // Tipo di modulo (Electron usa CommonJS)
+    "strict": true,                            // Abilita tutte le opzioni di controllo rigoroso
+    "esModuleInterop": true,                   // Per gestire correttamente l'importazione dei moduli
+    "skipLibCheck": true,                      // Ignora i controlli sui file di definizione delle librerie
+    "forceConsistentCasingInFileNames": true,  // Assicura la consistenza dei nomi dei file
+    "outDir": "./dist",                        // Dove compilare i file JS
+    "rootDir": "./src",                        // Cartella contenente i file TS
+    "baseUrl": "./src",                        // Base URL per i moduli relativi al progetto
+    "resolveJsonModule": true,                 // Abilita il caricamento di file JSON come moduli
+    "moduleResolution": "node",                // Risoluzione dei moduli come in Node.js
+    "allowJs": true,                           // Permette di importare file JS anche se il progetto è TS
+    "noEmitOnError": true,
+    "typeRoots": [
+      "src/types"                        // File di definizione dei tipi personalizzati
+    ]                  // Non emette JS se ci sono errori nel codice TS
+  },
+  "include": [
+    "src/**/*.ts"  // Include tutti i file TS nella cartella src
+  ],
+  "exclude": [
+    "node_modules"  // Esclude la cartella node_modules
+  ]
+}
