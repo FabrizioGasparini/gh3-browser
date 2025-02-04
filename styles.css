@@ -8,15 +8,78 @@
 
 html, body {
     height: 100%;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 body {
     background-color: #181818;
     color: #eaeaea;
+    width: 100%;
 }
+
+/* Style per la title bar personalizzata */
+.titlebar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #333;
+    color: white;
+    height: 30px;
+    padding: 5px;
+    user-select: none;
+    -webkit-app-region: drag; /* Rende la title bar trascinabile */
+}
+
+/* Lato sinistro della title bar */
+.titlebar-left {
+    display: flex;
+    align-items: center;
+}
+
+/* Lato destro della title bar (con i bottoni) */
+.titlebar-right {
+    display: flex;
+    align-items: center;
+}
+
+/* Bottoni per la finestra (minimizzare, massimizzare, chiudere) */
+.titlebar-right button {
+    background-color: transparent;
+    border: none;
+    color: #ccc;
+    font-size: 18px;
+    padding: 0 10px;
+    cursor: pointer;
+}
+
+.titlebar-right button:hover {
+    background-color: #303030;
+    color: white;
+}
+
+/* Impostazioni per l'app name */
+.titlebar .app-name {
+    font-size: 16px;
+    font-weight: bold;
+    color: white;
+}
+
+.titlebar .app-name {
+    font-size: 16px;
+    font-weight: bold;
+    color: white;
+}
+
+
+
+
 
 /* Contenitore principale */
 .main-container {
+    flex: 1;
     display: flex;
     justify-content: flex-start;
     align-items: stretch;
@@ -111,6 +174,7 @@ body {
     display: flex;
     align-items: center;
     background-color: transparent;
+    position: relative;
     padding: 10px;
     margin-bottom: 10px;
     border-radius: 8px;
@@ -121,6 +185,16 @@ body {
 .tab:hover {
     background-color: #444;
     transform: scale(1.02);
+}
+
+.tab-dragger {
+    position: absolute;
+    margin: 0;
+    height: 100%;
+    left: 0;
+    right: 0;
+    background-color: transparent;
+    z-index: 1;
 }
 
 /* Icona della tab */
@@ -156,6 +230,7 @@ body {
     align-items: center;
     cursor: pointer;
     transition: background-color 0.3s;
+    z-index: 2;
 }
 
 .tab:hover .tab-close {
@@ -173,7 +248,7 @@ body {
 }
 
 .tab.active .tab-title {
-    font-weight: bold;
+    font-weight: 600;
     color: white;
 }
 
@@ -315,4 +390,27 @@ webview.active {
 
 #back-btn, #forward-btn, #reload-btn {
     font-size: 18px;
+}
+
+
+#bg-title {
+    display: none;
+}
+#bg-title h1{
+    font-size: 64px;
+    font-weight: 500;
+    text-align: center;
+}
+#bg-title h2{
+    font-size: 26px;
+    font-weight: 200;
+    text-align: center;
+    color: #aaa;
+    margin-bottom: 10px;
+}
+#bg-title p{
+    font-size: 14px;
+    font-weight: 100;
+    text-align: center;
+    color: #505050;
 }

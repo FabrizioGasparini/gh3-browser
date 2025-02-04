@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "main": "src/main.ts",
     "scripts": {
-        "start": "tsc && electron ./dist/main.js",
+        "start": "clear && tsc && electron ./dist/main.js",
         "build": "tsc"
     },
     "keywords": [],

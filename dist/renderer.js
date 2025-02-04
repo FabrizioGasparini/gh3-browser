@@ -47,7 +47,44 @@ class BrowserTabs {
         this.searchBar.addEventListener("focusout", (e) => {
             this.setFloatingSearchbar(false);
         });
-        this.createTab();
+        this.tabList.addEventListener("dragstart", (event) => {
+            var _a;
+            const target = event.target;
+            // Salva l'id della tab che viene trascinata
+            (_a = event.dataTransfer) === null || _a === void 0 ? void 0 : _a.setData("text/plain", target.getAttribute("id"));
+            target.style.opacity = "0.5"; // Modifica l'opacità della tab mentre è in movimento
+        });
+        // Aggiungi l'evento dragover per permettere il drop
+        this.tabList.addEventListener("dragover", (event) => {
+            event.preventDefault(); // Permette il drop
+            const target = event.target;
+        });
+        this.tabList.addEventListener("drop", (event) => {
+            var _a, _b;
+            event.preventDefault();
+            const target = event.target;
+            const draggedId = (_a = event.dataTransfer) === null || _a === void 0 ? void 0 : _a.getData("text/plain");
+            if (((_b = target.parentElement) === null || _b === void 0 ? void 0 : _b.classList.contains("tab")) && draggedId) {
+                const draggedElement = document.getElementById(draggedId);
+                // Se il target è una tab, spostiamo la tab trascinata
+                if (draggedElement) {
+                    const draggedIndex = Array.from(this.tabList.children).indexOf(draggedElement);
+                    const targetIndex = Array.from(this.tabList.children).indexOf(target.parentElement);
+                    // Aggiungi il draggedElement prima o dopo il target
+                    if (draggedIndex < targetIndex) {
+                        this.tabList.insertBefore(draggedElement, target.parentElement.nextSibling);
+                    }
+                    else {
+                        this.tabList.insertBefore(draggedElement, target.parentElement);
+                    }
+                }
+            }
+        });
+        // Reset opacity della tab quando il drag finisce
+        this.tabList.addEventListener("dragend", (event) => {
+            const target = event.target;
+            target.style.opacity = "1";
+        });
     }
     toggleFloatingSidebar() {
         this.sidebar.classList.toggle("floating");
@@ -76,6 +113,7 @@ class BrowserTabs {
             icon: "https://www.google.com/favicon.ico",
             webview,
         };
+        console.log(tab);
         webview.addEventListener("page-title-updated", (e) => {
             tab.title = e.title;
             this.updateTabs();
@@ -100,14 +138,41 @@ class BrowserTabs {
         tabElement.innerHTML = `
             <img class="tab-image" src="${tab.icon}" />
             <span class="tab-title">${tab.title}</span>
+            <span class="tab-dragger"></span>
             <button class="tab-close">✕</button>
         `;
+        const bgTitle = document.getElementById("bg-title");
+        if (bgTitle)
+            bgTitle.style.display = "none";
+        tabElement.setAttribute("draggable", "true");
+        tabElement.setAttribute("id", tab.id);
         tabElement.addEventListener("click", () => this.setActiveTab(tab.id));
         tabElement.querySelector(".tab-close").addEventListener("click", (e) => {
             e.stopPropagation();
             this.closeTab(tab.id);
         });
         return tabElement;
+    }
+    saveTabs() {
+        const tabs = this.tabs;
+        const tabData = Array.from(tabs).map((tab) => {
+            return {
+                id: tab.id,
+                url: tab.url,
+            };
+        });
+        localStorage.setItem("tabs", JSON.stringify(tabData));
+        localStorage.setItem("activeTab", browser.activeTabId);
+    }
+    loadTabs() {
+        const savedTabs = JSON.parse(localStorage.getItem("tabs") || "[]");
+        savedTabs.forEach((tab) => {
+            const newTab = this.createTab(tab.url);
+            newTab.id = tab.id;
+        });
+        if (this.tabs.length == 0)
+            this.createTab();
+        browser.setActiveTab(localStorage.getItem("activeTab") || browser.tabs[0].id);
     }
     updateTabs() {
         this.tabList.innerHTML = "";
@@ -138,6 +203,9 @@ class BrowserTabs {
                 this.setActiveTab(this.tabs[newIndex].id);
             else
                 this.urlBar.value = "";
+            const bgTitle = document.getElementById("bg-title");
+            if (bgTitle && newIndex < 0)
+                bgTitle.style.display = "block";
         }
         this.updateTabs();
     }
@@ -183,4 +251,11 @@ window.electron.toggleFloatingSidebar(() => {
 window.electron.focusUrlBar(() => {
     browser.urlBar.select();
     browser.sidebar.classList.remove("floating");
+});
+window.addEventListener("beforeunload", () => {
+    browser.saveTabs();
+});
+// Caricamento della sessione
+window.addEventListener("load", () => {
+    browser.loadTabs();
 });

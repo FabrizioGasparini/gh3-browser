@@ -1,4 +1,4 @@
-import { app, BrowserWindow, globalShortcut } from "electron";
+import { app, BrowserWindow, globalShortcut, ipcMain } from "electron";
 import path from "path";
 
 let mainWindow: BrowserWindow;
@@ -13,6 +13,7 @@ app.whenReady().then(() => {
             contextIsolation: true,
             webviewTag: true,
         },
+        titleBarStyle: "hidden",
     });
 
     mainWindow.setMenu(null);
@@ -44,6 +45,21 @@ app.on("browser-window-focus", () => {
     globalShortcut.register("CommandOrControl+L", () => {
         mainWindow.webContents.send("focus-url-bar");
     });
+});
+
+ipcMain.on("minimize-window", () => {
+    let win = BrowserWindow.getFocusedWindow();
+    if (win) win.minimize();
+});
+
+ipcMain.on("maximize-window", () => {
+    let win = BrowserWindow.getFocusedWindow();
+    if (win) win.isMaximized() ? win.restore() : win.maximize();
+});
+
+ipcMain.on("close-window", () => {
+    let win = BrowserWindow.getFocusedWindow();
+    if (win) win.close();
 });
 
 app.on("browser-window-blur", () => {

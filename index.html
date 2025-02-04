@@ -6,9 +6,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gh3 Browser</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 
 <body>
+    <div class="titlebar">
+        <div class="titlebar-left">
+            <span class="app-name">Gh3 Browser</span>
+        </div>
+        <div class="titlebar-right">
+            <button id="minimize"><i class="fas fa-window-minimize"></i></button>
+            <button id="maximize"><i class="fas fa-window-restore"></i></button>
+            <button id="close"><i class="fas fa-times"></i></button>
+        </div>
+    </div>
     <div class="main-container">
         <div id="sidebar">
             <div class="nav-controls">
@@ -25,6 +36,11 @@
             <button id="new-tab"></button>
         </div>
         <div id="browser-container">
+            <div id="bg-title">
+                <h1>Gh3Browser</h1>
+                <h2>Di Fabrizio Gasparini</h2>
+                <p>Premi CTRL+T per creare una nuova scheda</p>
+            </div>
         </div>
         <div id="search-float">
             <input type="text" id="search-input" placeholder="Cerca o inserisci URL..." />

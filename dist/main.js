@@ -16,6 +16,7 @@ electron_1.app.whenReady().then(() => {
             contextIsolation: true,
             webviewTag: true,
         },
+        titleBarStyle: "hidden",
     });
     mainWindow.setMenu(null);
     mainWindow.webContents.on("before-input-event", (event, input) => {
@@ -39,6 +40,21 @@ electron_1.app.on("browser-window-focus", () => {
     electron_1.globalShortcut.register("CommandOrControl+L", () => {
         mainWindow.webContents.send("focus-url-bar");
     });
+});
+electron_1.ipcMain.on("minimize-window", () => {
+    let win = electron_1.BrowserWindow.getFocusedWindow();
+    if (win)
+        win.minimize();
+});
+electron_1.ipcMain.on("maximize-window", () => {
+    let win = electron_1.BrowserWindow.getFocusedWindow();
+    if (win)
+        win.isMaximized() ? win.restore() : win.maximize();
+});
+electron_1.ipcMain.on("close-window", () => {
+    let win = electron_1.BrowserWindow.getFocusedWindow();
+    if (win)
+        win.close();
 });
 electron_1.app.on("browser-window-blur", () => {
     electron_1.globalShortcut.unregisterAll();
