@@ -18,31 +18,41 @@ body {
     background-color: #181818;
     color: #eaeaea;
     width: 100%;
+    max-height: 100vh;
+    display: flex;
+    justify-content: start;
+    overflow: hidden;
 }
 
 /* Style per la title bar personalizzata */
 .titlebar {
     display: flex;
     justify-content: space-between;
-    align-items: center;
     background-color: #333;
     color: white;
     height: 30px;
-    padding: 5px;
     user-select: none;
-    -webkit-app-region: drag; /* Rende la title bar trascinabile */
 }
 
 /* Lato sinistro della title bar */
 .titlebar-left {
     display: flex;
     align-items: center;
+    margin: 0;
 }
 
 /* Lato destro della title bar (con i bottoni) */
 .titlebar-right {
     display: flex;
     align-items: center;
+    justify-content: center;
+    gap: 5px;
+    margin: 0;
+}
+
+.titlebar-drag {
+    -webkit-app-region: drag;
+    flex: 1;
 }
 
 /* Bottoni per la finestra (minimizzare, massimizzare, chiudere) */
@@ -51,31 +61,44 @@ body {
     border: none;
     color: #ccc;
     font-size: 18px;
-    padding: 0 10px;
+    padding: 0 14px;
     cursor: pointer;
-}
+    height: 30px;
+    flex: 1;
 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 .titlebar-right button:hover {
-    background-color: #303030;
+    background-color: #404040;
     color: white;
 }
+
+.titlebar-right button i {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.titlebar-right button#close:hover{
+    background-color: #ff0000;
+}
+
+
 
 /* Impostazioni per l'app name */
 .titlebar .app-name {
     font-size: 16px;
+    padding-left: 10px;
     font-weight: bold;
     color: white;
+    transition: scale 0.2s;
+    cursor: pointer;
 }
 
-.titlebar .app-name {
-    font-size: 16px;
-    font-weight: bold;
-    color: white;
+.titlebar .app-name:hover {
+    scale: 1.06;
 }
-
-
-
-
 
 /* Contenitore principale */
 .main-container {
@@ -83,11 +106,12 @@ body {
     display: flex;
     justify-content: flex-start;
     align-items: stretch;
-    height: 100%;
 }
 
 /* Sidebar */
 #sidebar {
+    /* toglie 30px dall'altezza massima, che rappresenta la topbar*/
+    max-height: calc(100vh - 30px);
     width: 250px;
     background-color: #1e1e1e;
     padding: 10px;
@@ -167,7 +191,37 @@ body {
     flex-direction: column;
     flex: 1;
     gap: 2px;
+    overflow-x: hidden;
+    overflow-y: scroll;
 }
+
+/* width */
+::-webkit-scrollbar {
+  width: 2px;
+}
+
+::-webkit-scrollbar-track {
+    background-color: transparent;
+    border-radius: 50px;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border-radius: 10px;
+}
+
+#tab-list:hover {
+    &::-webkit-scrollbar-track {
+        background-color: #888;
+        border-radius: 50px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background-color: #5e2a84;
+        border-radius: 10px;
+    }
+}
+
 
 /* Tab */
 .tab {
@@ -176,6 +230,7 @@ body {
     background-color: transparent;
     position: relative;
     padding: 10px;
+    margin: 0 2px;
     margin-bottom: 10px;
     border-radius: 8px;
     transition: background-color 0.2s, transform 0.2s;
@@ -255,7 +310,8 @@ body {
 
 /* Nuova tab */
 #new-tab {
-    background-color: #5c6bc0;
+    background-color: #5e2a84;
+    border: none;
     color: white;
     padding: 10px;
     border-radius: 4px;

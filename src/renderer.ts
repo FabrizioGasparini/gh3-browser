@@ -44,7 +44,7 @@ class BrowserTabs {
         });
 
         this.urlBar.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") this.loadUrl(this.urlBar.value);
+            if (e.key === "Enter" || e.key == "Escape") this.loadUrl(this.urlBar.value);
         });
 
         this.searchBar.addEventListener("keydown", (e) => {
@@ -107,6 +107,7 @@ class BrowserTabs {
     }
 
     public setFloatingSearchbar(active: boolean) {
+        this.searchBar.value = "";
         if (active) this.searchFloat.classList.add("active");
         else this.searchFloat.classList.remove("active");
         this.searchBar.focus();
@@ -147,6 +148,12 @@ class BrowserTabs {
         webview.addEventListener("did-navigate", (e) => {
             tab.url = e.url;
             if (this.activeTabId == id) this.urlBar.value = e.url;
+        });
+
+        webview.addEventListener("will-navigate", (event) => {
+            console.log(event);
+            const e = event as Electron.WillFrameNavigateEvent;
+            if (e.url != "about:blank") this.urlBar.value = e.url;
         });
 
         this.tabs.push(tab);
@@ -200,7 +207,10 @@ class BrowserTabs {
             newTab.id = tab.id;
         });
 
-        if (this.tabs.length == 0) this.createTab();
+        if (this.tabs.length == 0) {
+            browser.setFloatingSearchbar(true);
+            // this.createTab();
+        }
 
         browser.setActiveTab(localStorage.getItem("activeTab") || browser.tabs[0].id);
     }
@@ -313,19 +323,4 @@ window.addEventListener("beforeunload", () => {
 // Caricamento della sessione
 window.addEventListener("load", () => {
     browser.loadTabs();
-});
-
-// Funzione per minimizzare la finestra
-document.getElementById("minimize")?.addEventListener("click", () => {
-    window.electron.send("minimize-window");
-});
-
-// Funzione per massimizzare la finestra
-document.getElementById("maximize")?.addEventListener("click", () => {
-    ipcRenderer.send("maximize-window");
-});
-
-// Funzione per chiudere la finestra
-document.getElementById("close")?.addEventListener("click", () => {
-    ipcRenderer.send("close-window");
 });

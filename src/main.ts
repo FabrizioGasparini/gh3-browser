@@ -1,4 +1,4 @@
-import { app, BrowserWindow, globalShortcut, ipcMain } from "electron";
+import { app, BrowserWindow, globalShortcut, ipcMain, shell } from "electron";
 import path from "path";
 
 let mainWindow: BrowserWindow;

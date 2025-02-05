@@ -34,7 +34,7 @@ class BrowserTabs {
             this.reload();
         });
         this.urlBar.addEventListener("keydown", (e) => {
-            if (e.key === "Enter")
+            if (e.key === "Enter" || e.key == "Escape")
                 this.loadUrl(this.urlBar.value);
         });
         this.searchBar.addEventListener("keydown", (e) => {
@@ -90,6 +90,7 @@ class BrowserTabs {
         this.sidebar.classList.toggle("floating");
     }
     setFloatingSearchbar(active) {
+        this.searchBar.value = "";
         if (active)
             this.searchFloat.classList.add("active");
         else
@@ -125,6 +126,12 @@ class BrowserTabs {
         webview.addEventListener("did-navigate", (e) => {
             tab.url = e.url;
             if (this.activeTabId == id)
+                this.urlBar.value = e.url;
+        });
+        webview.addEventListener("will-navigate", (event) => {
+            console.log(event);
+            const e = event;
+            if (e.url != "about:blank")
                 this.urlBar.value = e.url;
         });
         this.tabs.push(tab);
@@ -170,8 +177,10 @@ class BrowserTabs {
             const newTab = this.createTab(tab.url);
             newTab.id = tab.id;
         });
-        if (this.tabs.length == 0)
-            this.createTab();
+        if (this.tabs.length == 0) {
+            browser.setFloatingSearchbar(true);
+            // this.createTab();
+        }
         browser.setActiveTab(localStorage.getItem("activeTab") || browser.tabs[0].id);
     }
     updateTabs() {

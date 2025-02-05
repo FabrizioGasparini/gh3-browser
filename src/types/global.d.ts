@@ -7,6 +7,7 @@ declare global {
             openSearchBar: (callback: () => void) => void;
             toggleFloatingSidebar: (callback: () => void) => void;
             focusUrlBar: (callback: () => void) => void;
+            openPopup: (url: string) => string;
         };
     }
 }
