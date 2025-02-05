@@ -9,11 +9,13 @@ interface Tab {
 class BrowserTabs {
     public tabs: Tab[] = [];
     public activeTabId: string | null = null;
+
     public container: HTMLElement;
     public sidebar: HTMLElement;
     public searchFloat: HTMLElement;
     public searchSuggestions: HTMLElement;
     public tabList: HTMLElement;
+
     public searchBar: HTMLInputElement;
     public urlBar: HTMLInputElement;
 
@@ -26,6 +28,12 @@ class BrowserTabs {
         this.searchBar = document.getElementById("search-input") as HTMLInputElement;
         this.urlBar = document.getElementById("url-bar") as HTMLInputElement;
 
+        this.setupSidebar();
+        this.setupTitlebar();
+        this.addEventListeners();
+    }
+
+    private setupSidebar() {
         document.getElementById("new-tab")?.addEventListener("click", () => this.createTab());
 
         document.getElementById("back")?.addEventListener("click", (e) => {
@@ -42,20 +50,29 @@ class BrowserTabs {
             e.preventDefault();
             this.reload();
         });
+    }
 
+    private setupTitlebar() {
+        document.getElementById("close")?.addEventListener("click", () => window.electron.closeWindow());
+        document.getElementById("maximize")?.addEventListener("click", () => window.electron.toggleMaximizeWindow());
+        document.getElementById("minimize")?.addEventListener("click", () => window.electron.minimizeWindow());
+    }
+
+    private addEventListeners() {
         this.urlBar.addEventListener("keydown", (e) => {
-            if (e.key === "Enter" || e.key == "Escape") this.loadUrl(this.urlBar.value);
+            if (e.key === "Enter") this.loadUrl(this.urlBar.value);
         });
 
         this.searchBar.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") this.showSearchbar(false);
             if (e.key === "Enter") {
                 if (this.searchBar.value != "") this.createTab(this.searchBar.value);
-                this.setFloatingSearchbar(false);
+                this.showSearchbar(false);
             }
         });
 
         this.searchBar.addEventListener("focusout", (e) => {
-            this.setFloatingSearchbar(false);
+            this.showSearchbar(false);
         });
 
         this.tabList.addEventListener("dragstart", (event) => {
@@ -106,22 +123,30 @@ class BrowserTabs {
         this.sidebar.classList.toggle("floating");
     }
 
-    public setFloatingSearchbar(active: boolean) {
+    public showSearchbar(active: boolean) {
         this.searchBar.value = "";
         if (active) this.searchFloat.classList.add("active");
         else this.searchFloat.classList.remove("active");
         this.searchBar.focus();
     }
 
+    public focusSearchbar() {
+        browser.urlBar.select();
+        browser.sidebar.classList.remove("floating");
+    }
+
     public createTab(url = "https://www.google.com") {
         const id = crypto.randomUUID();
 
-        if (!this.isValidUrl(url)) url = "https://www.google.com/search?q=" + encodeURI(url) + "&sourceid=chrome&ie=UTF-8";
-        else if (!url.startsWith("http")) url = "http://" + url;
+        if (!url.startsWith("http"))
+            if (!this.isValidUrl(url)) url = "https://www.google.com/search?q=" + encodeURI(url) + "&sourceid=chrome&ie=UTF-8";
+            else url = "http://" + url;
 
         const webview = document.createElement("webview");
         webview.setAttribute("src", url);
         webview.setAttribute("autosize", "on");
+        webview.setAttribute("allowpopups", "");
+        webview.setAttribute("webpreferences", "nativeWindowOpen=true");
 
         this.container.appendChild(webview);
 
@@ -132,8 +157,6 @@ class BrowserTabs {
             icon: "https://www.google.com/favicon.ico",
             webview,
         };
-
-        console.log(tab);
 
         webview.addEventListener("page-title-updated", (e) => {
             tab.title = e.title;
@@ -148,12 +171,31 @@ class BrowserTabs {
         webview.addEventListener("did-navigate", (e) => {
             tab.url = e.url;
             if (this.activeTabId == id) this.urlBar.value = e.url;
+
+            const back = document.getElementById("back");
+            if (back) back.style.color = webview.canGoBack() ? "#fff" : "#808080";
+
+            const forward = document.getElementById("forward");
+            if (forward) forward.style.color = webview.canGoForward() ? "#fff" : "#808080";
         });
 
-        webview.addEventListener("will-navigate", (event) => {
-            console.log(event);
-            const e = event as Electron.WillFrameNavigateEvent;
-            if (e.url != "about:blank") this.urlBar.value = e.url;
+        webview.addEventListener("context-menu", (event: Electron.ContextMenuEvent) => {
+            event.preventDefault();
+            const params = {
+                x: event.params.x,
+                y: event.params.y,
+                linkURL: event.params.linkURL || null,
+                srcURL: event.params.srcURL || null,
+                selectionText: event.params.selectionText || null,
+            };
+
+            const browser = {
+                tabs: this.tabs,
+                activeTabId: this.activeTabId,
+                createTab: this.createTab,
+            };
+
+            window.electron.showContextMenu(params, browser);
         });
 
         this.tabs.push(tab);
@@ -208,7 +250,7 @@ class BrowserTabs {
         });
 
         if (this.tabs.length == 0) {
-            browser.setFloatingSearchbar(true);
+            browser.showSearchbar(true);
             // this.createTab();
         }
 
@@ -292,35 +334,25 @@ class BrowserTabs {
     }
 
     public reload() {
-        const tab = this.getActiveTab();
-        tab?.webview.reload();
+        this.getActiveTab()?.webview.reload();
     }
 }
 
 const browser = new BrowserTabs();
 
-window.electron.closeActiveTab(() => {
-    browser.closeTab(browser.activeTabId!);
-});
+window.electron.closeActiveTab(() => browser.closeTab(browser.activeTabId!));
 
-window.electron.openSearchBar(() => {
-    browser.setFloatingSearchbar(true);
-});
+window.electron.openSearchBar(() => browser.showSearchbar(true));
 
-window.electron.toggleFloatingSidebar(() => {
-    browser.toggleFloatingSidebar();
-});
+window.electron.toggleFloatingSidebar(() => browser.toggleFloatingSidebar());
 
-window.electron.focusUrlBar(() => {
-    browser.urlBar.select();
-    browser.sidebar.classList.remove("floating");
-});
+window.electron.focusUrlBar(() => browser.focusSearchbar());
 
-window.addEventListener("beforeunload", () => {
-    browser.saveTabs();
-});
+window.page.reload(() => browser.reload());
+window.page.goBack(() => browser.goBack());
+window.page.goForward(() => browser.goForward());
 
-// Caricamento della sessione
-window.addEventListener("load", () => {
-    browser.loadTabs();
-});
+window.webview.openPopup((details: Electron.HandlerDetails) => browser.createTab(details.url));
+
+window.addEventListener("beforeunload", () => browser.saveTabs());
+window.addEventListener("load", () => browser.loadTabs());
