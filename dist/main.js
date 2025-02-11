@@ -6,7 +6,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const electron_1 = require("electron");
 const path_1 = __importDefault(require("path"));
 let mainWindow;
-const stateFile = path_1.default.join(electron_1.app.getPath("userData"), "tabsState.json");
 electron_1.app.whenReady().then(() => {
     mainWindow = new electron_1.BrowserWindow({
         width: 1200,
@@ -16,6 +15,7 @@ electron_1.app.whenReady().then(() => {
             nodeIntegration: false,
             contextIsolation: true,
             webviewTag: true,
+            disableBlinkFeatures: "CSSBackdropFilter",
         },
         titleBarStyle: "hidden",
     });
@@ -25,6 +25,10 @@ electron_1.app.whenReady().then(() => {
             case "f4":
                 if (input.alt && process.platform !== "darwin")
                     electron_1.app.quit();
+                break;
+            case "f12":
+                event.preventDefault();
+                mainWindow.webContents.send("toggle-devtools");
                 break;
             default:
                 break;
@@ -37,57 +41,54 @@ electron_1.app.whenReady().then(() => {
             return { action: "deny" };
         });
     });
-    /*if (fs.existsSync(stateFile)) {
-        const savedState = fs.readFileSync(stateFile, "utf-8");
-
-        if (savedState) {
-            mainWindow.webContents.executeJavaScript(`localStorage.setItem('tabsState', '${savedState}')`);
-        }
-    }*/
     mainWindow.loadFile("../index.html");
-    const brows = new BrowserTabs();
-    console.log(brows.activeTabId);
-    electron_1.ipcMain.on("show-context-menu", (event, params, browser) => {
-        var _a, _b;
+    electron_1.ipcMain.on("show-context-menu", (event, params, id) => {
         const contextMenu = new electron_1.Menu();
+        const webview = electron_1.webContents.fromId(id);
         if (params.linkURL) {
-            contextMenu.append(new electron_1.MenuItem({ label: "Apri in una nuova scheda", click: () => browser.createTab(params.linkURL) }));
+            contextMenu.append(new electron_1.MenuItem({ label: "Apri in una nuova scheda", click: () => mainWindow.webContents.send("open-popup", { url: params.linkURL }) }));
             contextMenu.append(new electron_1.MenuItem({ label: "Copia indirizzo link", click: () => electron_1.clipboard.writeText(params.linkURL) }));
         }
         else if (params.mediaType == "image") {
             contextMenu.append(new electron_1.MenuItem({ label: "Salva immagine", click: () => console.error(params.srcURL) }));
             contextMenu.append(new electron_1.MenuItem({ label: "Copia indirizzo immagine", click: () => electron_1.clipboard.writeText(params.srcURL) }));
         }
-        contextMenu.append(new electron_1.MenuItem({
-            label: "Indietro",
-            enabled: (_a = browser.getActiveTab()) === null || _a === void 0 ? void 0 : _a.webview.canGoBack(),
-            click: () => { var _a; return (_a = browser.getActiveTab()) === null || _a === void 0 ? void 0 : _a.webview.goBack(); },
-        }));
-        contextMenu.append(new electron_1.MenuItem({
-            label: "Avanti",
-            enabled: (_b = browser.getActiveTab()) === null || _b === void 0 ? void 0 : _b.webview.canGoForward(),
-            click: () => { var _a; return (_a = browser.getActiveTab()) === null || _a === void 0 ? void 0 : _a.webview.goForward(); },
-        }));
+        else {
+            contextMenu.append(new electron_1.MenuItem({
+                label: "Indietro",
+                enabled: webview === null || webview === void 0 ? void 0 : webview.navigationHistory.canGoBack(),
+                click: () => webview === null || webview === void 0 ? void 0 : webview.navigationHistory.goBack(),
+            }));
+            contextMenu.append(new electron_1.MenuItem({
+                label: "Avanti",
+                enabled: webview === null || webview === void 0 ? void 0 : webview.navigationHistory.canGoForward(),
+                click: () => webview === null || webview === void 0 ? void 0 : webview.navigationHistory.goForward(),
+            }));
+            contextMenu.append(new electron_1.MenuItem({ type: "separator" }));
+            contextMenu.append(new electron_1.MenuItem({
+                label: "Ricarica",
+                click: () => webview === null || webview === void 0 ? void 0 : webview.reload(),
+            }));
+            contextMenu.append(new electron_1.MenuItem({ type: "separator" }));
+            contextMenu.append(new electron_1.MenuItem({
+                label: "Traduci con Google",
+                enabled: params.selectionText != null,
+                click: () => {
+                    const selectedText = params.selectionText;
+                    if (selectedText) {
+                        const url = `https://translate.google.com/?text=${encodeURIComponent(selectedText)}`;
+                        mainWindow.webContents.send("open-popup", { url });
+                    }
+                },
+            }));
+        }
         contextMenu.append(new electron_1.MenuItem({ type: "separator" }));
-        contextMenu.append(new electron_1.MenuItem({
-            label: "Ricarica",
-            click: () => { var _a; return (_a = browser.getActiveTab()) === null || _a === void 0 ? void 0 : _a.webview.reload(); },
-        }));
-        contextMenu.append(new electron_1.MenuItem({ type: "separator" }));
-        contextMenu.append(new electron_1.MenuItem({
-            label: "Traduci con Google",
-            click: () => {
-                var _a;
-                const selectedText = (_a = document.getSelection()) === null || _a === void 0 ? void 0 : _a.toString();
-                if (selectedText) {
-                    const url = `https://translate.google.com/?text=${encodeURIComponent(selectedText)}`;
-                    browser.createTab(url);
-                }
-            },
-        }));
         contextMenu.append(new electron_1.MenuItem({
             label: "Ispeziona Elemento",
-            click: () => { var _a; return (_a = browser.getActiveTab()) === null || _a === void 0 ? void 0 : _a.webview.inspectElement(params.x, params.y); },
+            click: () => {
+                console.log();
+                mainWindow.webContents.send("toggle-devtools");
+            },
         }));
         // Mostra il menu nella posizione corretta
         contextMenu.popup({ window: mainWindow });
@@ -102,6 +103,11 @@ electron_1.app.on("browser-window-focus", () => {
     registerShortcut("CommandOrControl+R", () => mainWindow.webContents.send("reload-page"));
     registerShortcut("Alt+Left", () => mainWindow.webContents.send("go-back-page"));
     registerShortcut("Alt+Right", () => mainWindow.webContents.send("go-forward-page"));
+    registerShortcut("F12", () => console.log("f12"));
+    registerShortcut("F11", () => {
+        mainWindow.setFullScreen(!mainWindow.isFullScreen());
+        mainWindow.webContents.send("set-fullscreen", mainWindow.isFullScreen());
+    });
 });
 function registerShortcut(command, func) {
     electron_1.globalShortcut.register(command, func);

@@ -9,7 +9,9 @@ electron_1.contextBridge.exposeInMainWorld("electron", {
     closeWindow: () => electron_1.ipcRenderer.send("close-window"),
     minimizeWindow: () => electron_1.ipcRenderer.send("minimize-window"),
     toggleMaximizeWindow: () => electron_1.ipcRenderer.send("toggle-maximize-window"),
-    showContextMenu: (params, browser) => electron_1.ipcRenderer.send("show-context-menu", params, browser),
+    showContextMenu: (params, id) => electron_1.ipcRenderer.send("show-context-menu", params, id),
+    setDevToolsContent: (id, id_2) => electron_1.ipcRenderer.send("set-dev-tools-content", id, id_2),
+    setFullscreen: (callback) => electron_1.ipcRenderer.on("set-fullscreen", (event, value) => callback(value)),
 });
 electron_1.contextBridge.exposeInMainWorld("page", {
     reload: (callback) => electron_1.ipcRenderer.on("reload-page", callback),
@@ -18,4 +20,5 @@ electron_1.contextBridge.exposeInMainWorld("page", {
 });
 electron_1.contextBridge.exposeInMainWorld("webview", {
     openPopup: (callback) => electron_1.ipcRenderer.on("open-popup", (event, details) => callback(details)),
+    toggleDevTools: (callback) => electron_1.ipcRenderer.on("toggle-devtools", callback),
 });

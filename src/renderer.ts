@@ -3,18 +3,24 @@ interface Tab {
     title: string;
     url: string;
     icon: string;
+    visible: boolean;
     webview: Electron.WebviewTag;
 }
 
 class BrowserTabs {
     public tabs: Tab[] = [];
     public activeTabId: string | null = null;
+    public history: { [key: string]: [string, string] } = {};
 
     public container: HTMLElement;
     public sidebar: HTMLElement;
     public searchFloat: HTMLElement;
     public searchSuggestions: HTMLElement;
     public tabList: HTMLElement;
+    public suggestionsList: HTMLElement;
+
+    public selectedSuggestionIndex: number;
+    public suggestionsURLs: string[] = [];
 
     public searchBar: HTMLInputElement;
     public urlBar: HTMLInputElement;
@@ -25,8 +31,12 @@ class BrowserTabs {
         this.searchFloat = document.getElementById("search-float")!;
         this.searchSuggestions = document.getElementById("search-suggestions")!;
         this.tabList = document.getElementById("tab-list")!;
+        this.suggestionsList = document.getElementById("suggestions")!;
         this.searchBar = document.getElementById("search-input") as HTMLInputElement;
         this.urlBar = document.getElementById("url-bar") as HTMLInputElement;
+
+        this.selectedSuggestionIndex = 0;
+        this.suggestionsURLs = [];
 
         this.setupSidebar();
         this.setupTitlebar();
@@ -59,31 +69,61 @@ class BrowserTabs {
     }
 
     private addEventListeners() {
-        this.urlBar.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") this.loadUrl(this.urlBar.value);
+        this.urlBar.addEventListener("focus", (e) => {
+            browser.showSearchbar(true);
+            browser.updateSearchSuggestions();
+            browser.searchBar.value = this.urlBar.value;
+            browser.searchBar.select();
         });
 
         this.searchBar.addEventListener("keydown", (e) => {
-            if (e.key === "Escape") this.showSearchbar(false);
-            if (e.key === "Enter") {
-                if (this.searchBar.value != "") this.createTab(this.searchBar.value);
-                this.showSearchbar(false);
+            switch (e.key) {
+                case "Escape":
+                    if (this.searchBar.value != "" && this.suggestionsURLs.length != 0) {
+                        this.selectedSuggestionIndex = -1;
+                        this.suggestionsList.innerHTML = "";
+                        this.suggestionsURLs = [];
+                    } else {
+                        this.showSearchbar(false);
+                    }
+                    break;
+
+                case "Enter":
+                    if (this.searchBar.value == "") {
+                        if (this.selectedSuggestionIndex != -1 && this.suggestionsURLs.length != 0) this.createTab(this.suggestionsURLs[this.selectedSuggestionIndex]);
+                    } else {
+                        if (this.selectedSuggestionIndex == -1 || this.suggestionsURLs.length == 0) this.createTab(this.searchBar.value);
+                        else this.createTab(this.suggestionsURLs[this.selectedSuggestionIndex]);
+                    }
+
+                    this.showSearchbar(false);
+                    this.suggestionsList.innerHTML = "";
+                    break;
+
+                case "ArrowDown":
+                    e.preventDefault();
+                    this.moveSearchSuggestions("down");
+                    break;
+
+                case "ArrowUp":
+                    e.preventDefault();
+                    this.moveSearchSuggestions("up");
+                    break;
             }
         });
 
-        this.searchBar.addEventListener("focusout", (e) => {
-            this.showSearchbar(false);
+        this.searchFloat.addEventListener("focusout", (e: FocusEvent) => {
+            if (!(e.relatedTarget as HTMLElement)?.classList.contains("delete-search-btn")) this.showSearchbar(false);
+            else console.log("TASTO");
         });
 
         this.tabList.addEventListener("dragstart", (event) => {
             const target = event.target as HTMLElement;
 
-            // Salva l'id della tab che viene trascinata
             event.dataTransfer?.setData("text/plain", target.getAttribute("id")!);
             target.style.opacity = "0.5"; // Modifica l'opacità della tab mentre è in movimento
         });
 
-        // Aggiungi l'evento dragover per permettere il drop
         this.tabList.addEventListener("dragover", (event) => {
             event.preventDefault(); // Permette il drop
             const target = event.target as HTMLElement;
@@ -117,6 +157,10 @@ class BrowserTabs {
             const target = event.target as HTMLElement;
             target.style.opacity = "1";
         });
+
+        this.searchBar.addEventListener("input", async () => {
+            this.updateSearchSuggestions();
+        });
     }
 
     public toggleFloatingSidebar() {
@@ -128,43 +172,149 @@ class BrowserTabs {
         if (active) this.searchFloat.classList.add("active");
         else this.searchFloat.classList.remove("active");
         this.searchBar.focus();
+        this.selectedSuggestionIndex = 0;
     }
 
     public focusSearchbar() {
-        browser.urlBar.select();
-        browser.sidebar.classList.remove("floating");
+        this.urlBar.select();
+        this.sidebar.classList.remove("floating");
     }
 
-    public createTab(url = "https://www.google.com") {
-        const id = crypto.randomUUID();
+    public updateSearchSuggestions() {
+        this.suggestionsList.innerHTML = "";
+        this.selectedSuggestionIndex = 0;
+        this.suggestionsURLs = [];
+        let query = this.searchBar.value.toLowerCase();
+        let openTabs = this.tabs.filter((tab) => tab.title.toLowerCase().includes(query)).slice(0, 5);
 
-        if (!url.startsWith("http"))
-            if (!this.isValidUrl(url)) url = "https://www.google.com/search?q=" + encodeURI(url) + "&sourceid=chrome&ie=UTF-8";
-            else url = "http://" + url;
+        let totalSuggestions = openTabs.length;
+
+        openTabs.forEach((tab) => {
+            const suggestion = document.createElement("li");
+            suggestion.innerHTML = "";
+
+            suggestion.className = "suggestion";
+            suggestion.innerHTML = `
+                <div class="left">
+                    <img src="${tab.icon}" class="tab-image"></img> 
+                    <p>${tab.title}</p>
+                </div>
+                Open Tab →`;
+
+            suggestion.addEventListener("click", () => {
+                this.setActiveTab(tab.id);
+                this.showSearchbar(false);
+                this.suggestionsList.innerHTML = "";
+            });
+
+            this.suggestionsList.appendChild(suggestion);
+            this.suggestionsURLs.push("gh3b://" + tab.id);
+        });
+
+        for (let url in this.history) {
+            if (!url.includes(query)) continue;
+
+            if (totalSuggestions == 5) break;
+            totalSuggestions += 1;
+
+            const suggestion = document.createElement("li");
+            suggestion.className = "suggestion";
+            suggestion.innerHTML = `
+                    <div class="left">
+                        <img src="${this.history[url][1]}" class="tab-image"></img> 
+                        <p>${this.history[url][0]}</p>
+                    </div>
+                    <div class="center">
+                        <p>${url}</p>
+                    </div>
+                    `;
+
+            const btn = document.createElement("button");
+            btn.className = "tab-close delete-search-btn";
+            btn.innerText = "✕";
+            btn.addEventListener("click", () => {
+                delete this.history[url];
+                this.updateSearchSuggestions();
+            });
+
+            suggestion.appendChild(btn);
+
+            suggestion.addEventListener("click", (e) => {
+                if ((e.target as HTMLElement).className == "tab-close") return;
+
+                this.createTab(url);
+                this.showSearchbar(false);
+                this.suggestionsList.innerHTML = "";
+            });
+            this.suggestionsList.appendChild(suggestion);
+            this.suggestionsURLs.push(url);
+        }
+
+        this.suggestionsList.querySelectorAll(".suggestion")[this.selectedSuggestionIndex]?.classList.add("active");
+    }
+
+    public moveSearchSuggestions(direction: string) {
+        let items = document.querySelectorAll(".suggestion");
+        if (items.length === 0) return;
+
+        if (direction === "down") {
+            this.selectedSuggestionIndex = (this.selectedSuggestionIndex + 1) % items.length;
+        } else if (direction === "up") {
+            this.selectedSuggestionIndex = (this.selectedSuggestionIndex - 1 + items.length) % items.length;
+        }
+
+        items.forEach((item) => item.classList.remove("active"));
+        items[this.selectedSuggestionIndex].classList.add("active");
+    }
+
+    public createTab(url = "https://www.google.com", id: string = "", open: boolean = true, visible: boolean = true) {
+        id = id == "" ? crypto.randomUUID() : id;
+        let tabUrl = url == "" ? "https://www.google.com" : url;
+
+        if (tabUrl.startsWith("gh3b://")) {
+            const tab = this.getTab(tabUrl.split("://")[1]);
+            if (tab) {
+                this.setActiveTab(tab.id);
+                return;
+            }
+        }
+
+        if (!tabUrl.includes("://"))
+            if (!tabUrl.startsWith("http"))
+                if (!this.isValidUrl(tabUrl)) tabUrl = "https://www.google.com/search?q=" + encodeURI(tabUrl) + "&sourceid=chrome&ie=UTF-8";
+                else tabUrl = "https://" + tabUrl;
 
         const webview = document.createElement("webview");
-        webview.setAttribute("src", url);
+        webview.setAttribute("src", tabUrl);
         webview.setAttribute("autosize", "on");
         webview.setAttribute("allowpopups", "");
-        webview.setAttribute("webpreferences", "nativeWindowOpen=true");
+        webview.setAttribute("plugins", "");
+        webview.setAttribute("webpreferences", "nativeWindowOpen");
+        webview.setAttribute("webpreferences", "nativeWindowOpen");
+        webview.setAttribute("disableblinkfeatures", "CSSBackdropFilter");
 
         this.container.appendChild(webview);
 
         const tab: Tab = {
             id,
             title: "New Tab",
-            url,
+            url: tabUrl,
+            visible,
             icon: "https://www.google.com/favicon.ico",
             webview,
         };
 
         webview.addEventListener("page-title-updated", (e) => {
             tab.title = e.title;
+            this.history[webview.getURL().startsWith("https://www.google.com/search?q=") ? url : webview.getURL()] = [tab.title, tab.icon || ""];
+
             this.updateTabs();
         });
 
         webview.addEventListener("page-favicon-updated", (e) => {
             tab.icon = e.favicons[0];
+            this.history[webview.getURL().startsWith("https://www.google.com/search?q=") ? url : webview.getURL()] = [tab.title, tab.icon];
+
             this.updateTabs();
         });
 
@@ -177,6 +327,50 @@ class BrowserTabs {
 
             const forward = document.getElementById("forward");
             if (forward) forward.style.color = webview.canGoForward() ? "#fff" : "#808080";
+            document.querySelector('meta[name="color-scheme"]')?.setAttribute("content", "dark");
+        });
+
+        webview.addEventListener("dom-ready", () => {
+            webview.executeJavaScript(`
+                (function() {
+                    function fixBackground() {
+                        function setIfTransparent(el) {
+                            const computedBg = window.getComputedStyle(el).backgroundColor;
+                            
+                            if (!computedBg || computedBg === "rgba(0, 0, 0, 0)" || computedBg === "transparent") {
+                                el.style.backgroundColor = "white";
+                            }
+                        }
+
+                        // Controlla e imposta sfondo su <html> e <body>
+                        setIfTransparent(document.documentElement);
+                        setIfTransparent(document.body);
+
+                        // Controlla e imposta sfondo negli iframe
+                        document.querySelectorAll("iframe").forEach(iframe => {
+                            try {
+                                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                                if (iframeDoc) {
+                                    setIfTransparent(iframeDoc.documentElement);
+                                    setIfTransparent(iframeDoc.body);
+                                }
+                            } catch (e) {
+                                // Ignora errori di CORS sugli iframe esterni
+                            }
+                        });
+                    }
+
+                    // Applica subito il fix
+                    fixBackground();
+
+                    // Rileva modifiche alla pagina e riapplica se necessario
+                    const observer = new MutationObserver(fixBackground);
+                    observer.observe(document, { attributes: true, childList: true, subtree: true });
+
+                    // Controlla periodicamente per sicurezza
+                    setInterval(fixBackground, 2000);
+                })();
+            `);
         });
 
         webview.addEventListener("context-menu", (event: Electron.ContextMenuEvent) => {
@@ -189,16 +383,13 @@ class BrowserTabs {
                 selectionText: event.params.selectionText || null,
             };
 
-            const browser = {
-                tabs: this.tabs,
-                activeTabId: this.activeTabId,
-                createTab: this.createTab,
-            };
-
-            window.electron.showContextMenu(params, browser);
+            window.electron.showContextMenu(params, webview.getWebContentsId());
         });
 
         this.tabs.push(tab);
+
+        if (!open) return tab;
+
         this.setActiveTab(id);
         this.updateTabs();
 
@@ -211,7 +402,7 @@ class BrowserTabs {
         tabElement.innerHTML = `
             <img class="tab-image" src="${tab.icon}" />
             <span class="tab-title">${tab.title}</span>
-            <span class="tab-dragger"></span>
+            <span class="tab-dragger" title="${tab.id}"></span>
             <button class="tab-close">✕</button>
         `;
 
@@ -239,28 +430,31 @@ class BrowserTabs {
             };
         });
         localStorage.setItem("tabs", JSON.stringify(tabData));
-        localStorage.setItem("activeTab", browser.activeTabId!);
+        localStorage.setItem("activeTab", this.activeTabId!);
+        localStorage.setItem("history", JSON.stringify(this.history));
     }
 
     public loadTabs() {
         const savedTabs = JSON.parse(localStorage.getItem("tabs") || "[]");
         savedTabs.forEach((tab: { id: string; url: string }) => {
-            const newTab = this.createTab(tab.url);
+            const newTab = this.createTab(tab.url, "", false)!;
             newTab.id = tab.id;
         });
 
         if (this.tabs.length == 0) {
-            browser.showSearchbar(true);
+            this.showSearchbar(true);
+            this.updateSearchSuggestions();
             // this.createTab();
         }
 
-        browser.setActiveTab(localStorage.getItem("activeTab") || browser.tabs[0].id);
+        this.setActiveTab(localStorage.getItem("activeTab") || this.tabs[0].id);
+        this.history = JSON.parse(localStorage.getItem("history") || "{}");
     }
 
     public updateTabs() {
         this.tabList.innerHTML = "";
         this.tabs.forEach((tab) => {
-            this.tabList.appendChild(this.createTabElement(tab));
+            if (tab.visible) this.tabList.appendChild(this.createTabElement(tab));
         });
     }
 
@@ -300,6 +494,10 @@ class BrowserTabs {
         return this.tabs.find((tab) => tab.id == this.activeTabId);
     }
 
+    public getTab(id: string) {
+        return this.tabs.find((tab) => tab.id == id);
+    }
+
     public isValidUrl = (urlString: string) => {
         var urlPattern = new RegExp(
             "^(https?:\\/\\/)?" + // protocollo
@@ -316,8 +514,18 @@ class BrowserTabs {
     public loadUrl(url: string) {
         let tab = this.getActiveTab();
 
-        if (!this.isValidUrl(url)) url = "https://www.google.com/search?q=" + encodeURI(url) + "&sourceid=chrome&ie=UTF-8";
-        else if (!url.startsWith("http")) url = "http://" + url;
+        if (url.startsWith("gh3b://")) {
+            const newTab = this.getTab(url.split("://")[1]);
+            if (newTab) {
+                this.setActiveTab(newTab.id);
+                return;
+            }
+        }
+
+        if (!url.includes("://"))
+            if (!url.startsWith("http"))
+                if (!this.isValidUrl(url)) url = "https://www.google.com/search?q=" + encodeURI(url) + "&sourceid=chrome&ie=UTF-8";
+                else url = "http://" + url;
 
         if (!tab) this.createTab(url);
         else tab.webview.loadURL(url);
@@ -336,22 +544,35 @@ class BrowserTabs {
     public reload() {
         this.getActiveTab()?.webview.reload();
     }
+
+    public toggleDevTools() {
+        const webview = this.getActiveTab()?.webview!;
+        webview.isDevToolsOpened() ? webview.closeDevTools() : webview.openDevTools();
+        /*const dev_tool = this.getTab("dev-tools")?.webview!;
+        window.electron.setDevToolsContent(dev_tool.getWebContentsId(), webview.getWebContentsId());
+        this.getTab("dev-tools")?.webview.classList.toggle("active");*/
+        //window.electron.getWebContentsFromId(webview.getWebContentsId())?.setDevToolsWebContents(Electron.webContents.fromId(webview.getWebContentsId())?.devToolsWebContents!);
+    }
 }
 
 const browser = new BrowserTabs();
 
 window.electron.closeActiveTab(() => browser.closeTab(browser.activeTabId!));
 
-window.electron.openSearchBar(() => browser.showSearchbar(true));
+window.electron.openSearchBar(() => {
+    browser.showSearchbar(true);
+    browser.updateSearchSuggestions();
+});
 
 window.electron.toggleFloatingSidebar(() => browser.toggleFloatingSidebar());
-
 window.electron.focusUrlBar(() => browser.focusSearchbar());
+window.electron.setFullscreen((value: boolean) => document.getElementById("title-bar")?.classList.toggle("hide", value));
 
 window.page.reload(() => browser.reload());
 window.page.goBack(() => browser.goBack());
 window.page.goForward(() => browser.goForward());
 
+window.webview.toggleDevTools(() => browser.toggleDevTools());
 window.webview.openPopup((details: Electron.HandlerDetails) => browser.createTab(details.url));
 
 window.addEventListener("beforeunload", () => browser.saveTabs());

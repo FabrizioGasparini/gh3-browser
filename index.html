@@ -10,7 +10,7 @@
 </head>
 
 <body>
-    <div class="titlebar">
+    <div class="titlebar" id="title-bar">
         <div class="titlebar-left">
             <span class="app-name">Gh3 Browser</span>
         </div>
@@ -31,7 +31,7 @@
                 <button id="reload">⟳</button>
             </div>
             <div class="url-container">
-                <input type="text" id="url-bar" placeholder="Cerca o inserisci URL..." />
+                <input type="text" id="url-bar" placeholder="Cerca o inserisci URL..." readonly />
             </div>
             <div id="tab-list"></div>
             <button id="new-tab"><i class="fa fa-plus"></i></button>
@@ -43,8 +43,13 @@
                 <p>Premi CTRL+T per creare una nuova scheda</p>
             </div>
         </div>
+        <div id="devtools-container">
+            <webview id="devtools-webview"></webview>
+        </div>
         <div id="search-float">
             <input type="text" id="search-input" placeholder="Cerca o inserisci URL..." />
+            <ul id="suggestions" class="suggestions-list">
+            </ul>
         </div>
     </div>
 

@@ -11,7 +11,10 @@ declare global {
             closeWindow: () => void;
             minimizeWindow: () => void;
             toggleMaximizeWindow: () => void;
-            showContextMenu: (params: {}, browser: {}) => void;
+            showContextMenu: (params: {}, id: number) => void;
+
+            setDevToolsContent: (id: number, id_2: number) => void;
+            setFullscreen: (callback: (value: boolean) => void) => void;
         };
 
         page: {
@@ -22,6 +25,7 @@ declare global {
 
         webview: {
             openPopup: (callback: (details: Electron.HandlerDetails) => void) => string;
+            toggleDevTools: (callback: () => void) => string;
         };
     }
 }
