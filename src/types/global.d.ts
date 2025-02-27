@@ -4,9 +4,11 @@ declare global {
     interface Window {
         electron: {
             closeActiveTab: (callback: () => void) => void;
+            changeActiveTab: (callback: (dir: number) => void) => void;
             openSearchBar: (callback: () => void) => void;
             toggleFloatingSidebar: (callback: () => void) => void;
             focusUrlBar: (callback: () => void) => void;
+            toggleHistoryPanel: (callback: () => void) => void;
 
             closeWindow: () => void;
             minimizeWindow: () => void;

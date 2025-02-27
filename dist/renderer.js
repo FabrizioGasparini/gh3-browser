@@ -12,7 +12,9 @@ class BrowserTabs {
     constructor() {
         this.tabs = [];
         this.activeTabId = null;
-        this.history = {};
+        this.activeTabIndex = null;
+        this.suggestionsHistory = {};
+        this.history = [];
         this.suggestionsURLs = [];
         this.isValidUrl = (urlString) => {
             var urlPattern = new RegExp("^(https?:\\/\\/)?" + // protocollo
@@ -137,6 +139,7 @@ class BrowserTabs {
                     else {
                         this.tabList.insertBefore(draggedElement, target.parentElement);
                     }
+                    [this.tabs[draggedIndex], this.tabs[targetIndex]] = [this.tabs[targetIndex], this.tabs[draggedIndex]];
                 }
             }
         });
@@ -191,7 +194,7 @@ class BrowserTabs {
             this.suggestionsList.appendChild(suggestion);
             this.suggestionsURLs.push("gh3b://" + tab.id);
         });
-        for (let url in this.history) {
+        for (let url in this.suggestionsHistory) {
             if (!url.includes(query))
                 continue;
             if (totalSuggestions == 5)
@@ -201,8 +204,8 @@ class BrowserTabs {
             suggestion.className = "suggestion";
             suggestion.innerHTML = `
                     <div class="left">
-                        <img src="${this.history[url][1]}" class="tab-image"></img> 
-                        <p>${this.history[url][0]}</p>
+                        <img src="${this.suggestionsHistory[url][1]}" class="tab-image"></img> 
+                        <p>${this.suggestionsHistory[url][0]}</p>
                     </div>
                     <div class="center">
                         <p>${url}</p>
@@ -212,7 +215,7 @@ class BrowserTabs {
             btn.className = "tab-close delete-search-btn";
             btn.innerText = "✕";
             btn.addEventListener("click", () => {
-                delete this.history[url];
+                delete this.suggestionsHistory[url];
                 this.updateSearchSuggestions();
             });
             suggestion.appendChild(btn);
@@ -276,12 +279,12 @@ class BrowserTabs {
         };
         webview.addEventListener("page-title-updated", (e) => {
             tab.title = e.title;
-            this.history[webview.getURL().startsWith("https://www.google.com/search?q=") ? url : webview.getURL()] = [tab.title, tab.icon || ""];
+            this.suggestionsHistory[webview.getURL().startsWith("https://www.google.com/search?q=") ? url : webview.getURL()] = [tab.title, tab.icon || ""];
             this.updateTabs();
         });
         webview.addEventListener("page-favicon-updated", (e) => {
             tab.icon = e.favicons[0];
-            this.history[webview.getURL().startsWith("https://www.google.com/search?q=") ? url : webview.getURL()] = [tab.title, tab.icon];
+            this.suggestionsHistory[webview.getURL().startsWith("https://www.google.com/search?q=") ? url : webview.getURL()] = [tab.title, tab.icon];
             this.updateTabs();
         });
         webview.addEventListener("did-navigate", (e) => {
@@ -296,6 +299,7 @@ class BrowserTabs {
             if (forward)
                 forward.style.color = webview.canGoForward() ? "#fff" : "#808080";
             (_a = document.querySelector('meta[name="color-scheme"]')) === null || _a === void 0 ? void 0 : _a.setAttribute("content", "dark");
+            this.history.push({ title: tab.title, url: tab.url, timestamp: Date.now() });
         });
         webview.addEventListener("dom-ready", () => {
             webview.executeJavaScript(`
@@ -388,6 +392,7 @@ class BrowserTabs {
         });
         localStorage.setItem("tabs", JSON.stringify(tabData));
         localStorage.setItem("activeTab", this.activeTabId);
+        localStorage.setItem("suggestionsHistory", JSON.stringify(this.suggestionsHistory));
         localStorage.setItem("history", JSON.stringify(this.history));
     }
     loadTabs() {
@@ -399,10 +404,23 @@ class BrowserTabs {
         if (this.tabs.length == 0) {
             this.showSearchbar(true);
             this.updateSearchSuggestions();
-            // this.createTab();
         }
         this.setActiveTab(localStorage.getItem("activeTab") || this.tabs[0].id);
-        this.history = JSON.parse(localStorage.getItem("history") || "{}");
+        this.suggestionsHistory = JSON.parse(localStorage.getItem("suggestionsHistory") || "{}");
+        this.history = JSON.parse(localStorage.getItem("history") || "[]");
+        const historyPanel = document.getElementById("history-panel");
+        const historyList = document.getElementById("history-list");
+        const historySearch = document.getElementById("history-search");
+        const openHistory = document.getElementById("open-history");
+        const closeHistory = document.getElementById("close-history");
+        const clearHistory = document.getElementById("clear-history");
+        historyList.innerHTML = "";
+        this.history.forEach((entry) => {
+            let li = document.createElement("li");
+            li.innerHTML = `<strong>${entry.title}</strong> <br> <small>${entry.url}</small>`;
+            li.addEventListener("click", () => window.open(entry.url));
+            historyList.appendChild(li);
+        });
     }
     updateTabs() {
         this.tabList.innerHTML = "";
@@ -416,8 +434,25 @@ class BrowserTabs {
         const tab = this.tabs.find((tab) => tab.id == id);
         if (!tab)
             return;
+        this.activeTabIndex = this.tabs.indexOf(tab);
         this.tabs.forEach((tab) => {
             tab.webview.classList.toggle("active", tab.id == id);
+        });
+        this.urlBar.value = tab.url;
+        this.updateTabs();
+    }
+    setActiveTabFromIndex(index) {
+        if (index < 0)
+            index = this.tabs.length - 1;
+        if (index > this.tabs.length - 1)
+            index = 0;
+        const tab = this.tabs[index];
+        if (!tab)
+            return;
+        this.activeTabId = tab.id;
+        this.activeTabIndex = index;
+        this.tabs.forEach((t) => {
+            t.webview.classList.toggle("active", tab.id == t.id);
         });
         this.urlBar.value = tab.url;
         this.updateTabs();
@@ -492,11 +527,13 @@ class BrowserTabs {
 }
 const browser = new BrowserTabs();
 window.electron.closeActiveTab(() => browser.closeTab(browser.activeTabId));
+window.electron.changeActiveTab((dir) => browser.setActiveTabFromIndex(browser.activeTabIndex + dir));
 window.electron.openSearchBar(() => {
     browser.showSearchbar(true);
     browser.updateSearchSuggestions();
 });
 window.electron.toggleFloatingSidebar(() => browser.toggleFloatingSidebar());
+window.electron.toggleHistoryPanel(() => { var _a; return (_a = document.getElementById("history-panel")) === null || _a === void 0 ? void 0 : _a.classList.toggle("active"); });
 window.electron.focusUrlBar(() => browser.focusSearchbar());
 window.electron.setFullscreen((value) => { var _a; return (_a = document.getElementById("title-bar")) === null || _a === void 0 ? void 0 : _a.classList.toggle("hide", value); });
 window.page.reload(() => browser.reload());

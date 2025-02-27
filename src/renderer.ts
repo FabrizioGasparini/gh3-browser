@@ -7,10 +7,18 @@ interface Tab {
     webview: Electron.WebviewTag;
 }
 
+interface HistoryElement {
+    title: string;
+    url: string;
+    timestamp: number;
+}
+
 class BrowserTabs {
     public tabs: Tab[] = [];
     public activeTabId: string | null = null;
-    public history: { [key: string]: [string, string] } = {};
+    public activeTabIndex: number | null = null;
+    public suggestionsHistory: { [key: string]: [string, string] } = {};
+    public history: HistoryElement[] = [];
 
     public container: HTMLElement;
     public sidebar: HTMLElement;
@@ -148,6 +156,8 @@ class BrowserTabs {
                     } else {
                         this.tabList.insertBefore(draggedElement, target.parentElement);
                     }
+
+                    [this.tabs[draggedIndex], this.tabs[targetIndex]] = [this.tabs[targetIndex], this.tabs[draggedIndex]];
                 }
             }
         });
@@ -211,7 +221,7 @@ class BrowserTabs {
             this.suggestionsURLs.push("gh3b://" + tab.id);
         });
 
-        for (let url in this.history) {
+        for (let url in this.suggestionsHistory) {
             if (!url.includes(query)) continue;
 
             if (totalSuggestions == 5) break;
@@ -221,8 +231,8 @@ class BrowserTabs {
             suggestion.className = "suggestion";
             suggestion.innerHTML = `
                     <div class="left">
-                        <img src="${this.history[url][1]}" class="tab-image"></img> 
-                        <p>${this.history[url][0]}</p>
+                        <img src="${this.suggestionsHistory[url][1]}" class="tab-image"></img> 
+                        <p>${this.suggestionsHistory[url][0]}</p>
                     </div>
                     <div class="center">
                         <p>${url}</p>
@@ -233,7 +243,7 @@ class BrowserTabs {
             btn.className = "tab-close delete-search-btn";
             btn.innerText = "✕";
             btn.addEventListener("click", () => {
-                delete this.history[url];
+                delete this.suggestionsHistory[url];
                 this.updateSearchSuggestions();
             });
 
@@ -306,14 +316,14 @@ class BrowserTabs {
 
         webview.addEventListener("page-title-updated", (e) => {
             tab.title = e.title;
-            this.history[webview.getURL().startsWith("https://www.google.com/search?q=") ? url : webview.getURL()] = [tab.title, tab.icon || ""];
+            this.suggestionsHistory[webview.getURL().startsWith("https://www.google.com/search?q=") ? url : webview.getURL()] = [tab.title, tab.icon || ""];
 
             this.updateTabs();
         });
 
         webview.addEventListener("page-favicon-updated", (e) => {
             tab.icon = e.favicons[0];
-            this.history[webview.getURL().startsWith("https://www.google.com/search?q=") ? url : webview.getURL()] = [tab.title, tab.icon];
+            this.suggestionsHistory[webview.getURL().startsWith("https://www.google.com/search?q=") ? url : webview.getURL()] = [tab.title, tab.icon];
 
             this.updateTabs();
         });
@@ -328,6 +338,8 @@ class BrowserTabs {
             const forward = document.getElementById("forward");
             if (forward) forward.style.color = webview.canGoForward() ? "#fff" : "#808080";
             document.querySelector('meta[name="color-scheme"]')?.setAttribute("content", "dark");
+
+            this.history.push({ title: tab.title, url: tab.url, timestamp: Date.now() } as HistoryElement);
         });
 
         webview.addEventListener("dom-ready", () => {
@@ -431,6 +443,7 @@ class BrowserTabs {
         });
         localStorage.setItem("tabs", JSON.stringify(tabData));
         localStorage.setItem("activeTab", this.activeTabId!);
+        localStorage.setItem("suggestionsHistory", JSON.stringify(this.suggestionsHistory));
         localStorage.setItem("history", JSON.stringify(this.history));
     }
 
@@ -444,11 +457,11 @@ class BrowserTabs {
         if (this.tabs.length == 0) {
             this.showSearchbar(true);
             this.updateSearchSuggestions();
-            // this.createTab();
         }
 
         this.setActiveTab(localStorage.getItem("activeTab") || this.tabs[0].id);
-        this.history = JSON.parse(localStorage.getItem("history") || "{}");
+        this.suggestionsHistory = JSON.parse(localStorage.getItem("suggestionsHistory") || "{}");
+        this.history = JSON.parse(localStorage.getItem("history") || "[]");
     }
 
     public updateTabs() {
@@ -463,8 +476,28 @@ class BrowserTabs {
         const tab = this.tabs.find((tab) => tab.id == id);
         if (!tab) return;
 
+        this.activeTabIndex = this.tabs.indexOf(tab);
+
         this.tabs.forEach((tab) => {
             tab.webview.classList.toggle("active", tab.id == id);
+        });
+
+        this.urlBar.value = tab.url;
+        this.updateTabs();
+    }
+
+    public setActiveTabFromIndex(index: number) {
+        if (index < 0) index = this.tabs.length - 1;
+        if (index > this.tabs.length - 1) index = 0;
+
+        const tab = this.tabs[index];
+        if (!tab) return;
+
+        this.activeTabId = tab.id;
+        this.activeTabIndex = index;
+
+        this.tabs.forEach((t) => {
+            t.webview.classList.toggle("active", tab.id == t.id);
         });
 
         this.urlBar.value = tab.url;
@@ -558,6 +591,7 @@ class BrowserTabs {
 const browser = new BrowserTabs();
 
 window.electron.closeActiveTab(() => browser.closeTab(browser.activeTabId!));
+window.electron.changeActiveTab((dir: number) => browser.setActiveTabFromIndex(browser.activeTabIndex! + dir));
 
 window.electron.openSearchBar(() => {
     browser.showSearchbar(true);
@@ -565,6 +599,7 @@ window.electron.openSearchBar(() => {
 });
 
 window.electron.toggleFloatingSidebar(() => browser.toggleFloatingSidebar());
+window.electron.toggleHistoryPanel(() => document.getElementById("history-panel")?.classList.toggle("active"));
 window.electron.focusUrlBar(() => browser.focusSearchbar());
 window.electron.setFullscreen((value: boolean) => document.getElementById("title-bar")?.classList.toggle("hide", value));
 

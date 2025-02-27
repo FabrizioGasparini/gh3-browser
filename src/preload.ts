@@ -2,9 +2,11 @@ import { contextBridge, ipcRenderer, WebviewTag } from "electron";
 
 contextBridge.exposeInMainWorld("electron", {
     closeActiveTab: (callback: () => void) => ipcRenderer.on("close-active-tab", callback),
+    changeActiveTab: (callback: (dir: number) => void) => ipcRenderer.on("change-active-tab", (event: Electron.Event, dir: number) => callback(dir)),
     openSearchBar: (callback: () => void) => ipcRenderer.on("open-search-bar", callback),
     toggleFloatingSidebar: (callback: () => void) => ipcRenderer.on("toggle-floating-sidebar", callback),
     focusUrlBar: (callback: () => void) => ipcRenderer.on("focus-url-bar", callback),
+    toggleHistoryPanel: (callback: () => void) => ipcRenderer.on("toggle-history-panel", callback),
 
     closeWindow: () => ipcRenderer.send("close-window"),
     minimizeWindow: () => ipcRenderer.send("minimize-window"),

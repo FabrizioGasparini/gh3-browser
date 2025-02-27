@@ -123,6 +123,12 @@ app.on("browser-window-focus", () => {
     registerShortcut("CommandOrControl+T", () => mainWindow.webContents.send("open-search-bar"));
     registerShortcut("CommandOrControl+S", () => mainWindow.webContents.send("toggle-floating-sidebar"));
     registerShortcut("CommandOrControl+L", () => mainWindow.webContents.send("focus-url-bar"));
+    registerShortcut("CommandOrControl+H", () => mainWindow.webContents.send("toggle-history-panel"));
+
+    registerShortcut("Alt+Up", () => mainWindow.webContents.send("change-active-tab", -1));
+    registerShortcut("Alt+Down", () => mainWindow.webContents.send("change-active-tab", 1));
+
+    registerShortcut("CommandOrControl+Tab", () => mainWindow.webContents.send("change-active-tab", 1));
 
     registerShortcut("CommandOrControl+R", () => mainWindow.webContents.send("reload-page"));
     registerShortcut("Alt+Left", () => mainWindow.webContents.send("go-back-page"));
