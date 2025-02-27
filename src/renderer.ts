@@ -5,6 +5,7 @@ interface Tab {
     icon: string;
     visible: boolean;
     webview: Electron.WebviewTag;
+    loaded: boolean;
 }
 
 interface HistoryElement {
@@ -23,9 +24,11 @@ class BrowserTabs {
     public container: HTMLElement;
     public sidebar: HTMLElement;
     public searchFloat: HTMLElement;
+    public historyPanel: HTMLElement;
     public searchSuggestions: HTMLElement;
     public tabList: HTMLElement;
     public suggestionsList: HTMLElement;
+    public historyList: HTMLElement;
 
     public selectedSuggestionIndex: number;
     public suggestionsURLs: string[] = [];
@@ -37,9 +40,11 @@ class BrowserTabs {
         this.container = document.getElementById("browser-container")!;
         this.sidebar = document.getElementById("sidebar")!;
         this.searchFloat = document.getElementById("search-float")!;
+        this.historyPanel = document.getElementById("history-panel")!;
         this.searchSuggestions = document.getElementById("search-suggestions")!;
         this.tabList = document.getElementById("tab-list")!;
         this.suggestionsList = document.getElementById("suggestions")!;
+        this.historyList = document.getElementById("history-list")!;
         this.searchBar = document.getElementById("search-input") as HTMLInputElement;
         this.urlBar = document.getElementById("url-bar") as HTMLInputElement;
 
@@ -122,7 +127,6 @@ class BrowserTabs {
 
         this.searchFloat.addEventListener("focusout", (e: FocusEvent) => {
             if (!(e.relatedTarget as HTMLElement)?.classList.contains("delete-search-btn")) this.showSearchbar(false);
-            else console.log("TASTO");
         });
 
         this.tabList.addEventListener("dragstart", (event) => {
@@ -151,12 +155,11 @@ class BrowserTabs {
                     const targetIndex = Array.from(this.tabList.children).indexOf(target.parentElement);
 
                     // Aggiungi il draggedElement prima o dopo il target
-                    if (draggedIndex < targetIndex) {
+                    if (draggedIndex < targetIndex) 
                         this.tabList.insertBefore(draggedElement, target.parentElement.nextSibling);
-                    } else {
+                    else
                         this.tabList.insertBefore(draggedElement, target.parentElement);
-                    }
-
+                    
                     [this.tabs[draggedIndex], this.tabs[targetIndex]] = [this.tabs[targetIndex], this.tabs[draggedIndex]];
                 }
             }
@@ -183,6 +186,12 @@ class BrowserTabs {
         else this.searchFloat.classList.remove("active");
         this.searchBar.focus();
         this.selectedSuggestionIndex = 0;
+        this.updateSearchSuggestions()
+    }
+
+    public toggleHistoryPanel() {
+        this.historyPanel.classList.toggle("active");
+        this.updateHistoryList()
     }
 
     public focusSearchbar() {
@@ -263,6 +272,25 @@ class BrowserTabs {
         this.suggestionsList.querySelectorAll(".suggestion")[this.selectedSuggestionIndex]?.classList.add("active");
     }
 
+    public updateHistoryList() {
+        this.historyList.innerHTML = "";
+
+        this.history.forEach((page) => {
+            const elem = document.createElement("li");
+            elem.className = "page";
+            elem.innerHTML = `
+                <div class="left">
+                    <p>${page.title}</p>
+                </div>
+                <div class="center">
+                    <p>${page.url}</p>
+                </div>
+            `;
+
+            this.historyList.appendChild(elem)
+        })
+    }
+
     public moveSearchSuggestions(direction: string) {
         let items = document.querySelectorAll(".suggestion");
         if (items.length === 0) return;
@@ -289,10 +317,15 @@ class BrowserTabs {
             }
         }
 
-        if (!tabUrl.includes("://"))
-            if (!tabUrl.startsWith("http"))
+        if (!tabUrl.includes("://")) {
+            if (!tabUrl.startsWith("http")) {
+                console.log(tabUrl)
                 if (!this.isValidUrl(tabUrl)) tabUrl = "https://www.google.com/search?q=" + encodeURI(tabUrl) + "&sourceid=chrome&ie=UTF-8";
                 else tabUrl = "https://" + tabUrl;
+            }
+        }
+
+        console.log(tabUrl)
 
         const webview = document.createElement("webview");
         webview.setAttribute("src", tabUrl);
@@ -312,6 +345,7 @@ class BrowserTabs {
             visible,
             icon: "https://www.google.com/favicon.ico",
             webview,
+            loaded: false
         };
 
         webview.addEventListener("page-title-updated", (e) => {
@@ -330,6 +364,7 @@ class BrowserTabs {
 
         webview.addEventListener("did-navigate", (e) => {
             tab.url = e.url;
+            
             if (this.activeTabId == id) this.urlBar.value = e.url;
 
             const back = document.getElementById("back");
@@ -339,10 +374,12 @@ class BrowserTabs {
             if (forward) forward.style.color = webview.canGoForward() ? "#fff" : "#808080";
             document.querySelector('meta[name="color-scheme"]')?.setAttribute("content", "dark");
 
-            this.history.push({ title: tab.title, url: tab.url, timestamp: Date.now() } as HistoryElement);
         });
-
+        
         webview.addEventListener("dom-ready", () => {
+            tab.loaded = true;
+            this.history.push({ title: tab.title, url: tab.url, timestamp: Date.now() } as HistoryElement);
+
             webview.executeJavaScript(`
                 (function() {
                     function fixBackground() {
@@ -433,7 +470,7 @@ class BrowserTabs {
         return tabElement;
     }
 
-    public saveTabs() {
+    public saveBrowser() {
         const tabs = this.tabs;
         const tabData = Array.from(tabs).map((tab) => {
             return {
@@ -447,7 +484,7 @@ class BrowserTabs {
         localStorage.setItem("history", JSON.stringify(this.history));
     }
 
-    public loadTabs() {
+    public loadBrowser() {
         const savedTabs = JSON.parse(localStorage.getItem("tabs") || "[]");
         savedTabs.forEach((tab: { id: string; url: string }) => {
             const newTab = this.createTab(tab.url, "", false)!;
@@ -555,10 +592,12 @@ class BrowserTabs {
             }
         }
 
-        if (!url.includes("://"))
-            if (!url.startsWith("http"))
+        if (!url.includes("://")) {
+            if (!url.startsWith("http")) {
                 if (!this.isValidUrl(url)) url = "https://www.google.com/search?q=" + encodeURI(url) + "&sourceid=chrome&ie=UTF-8";
                 else url = "http://" + url;
+            }
+        }
 
         if (!tab) this.createTab(url);
         else tab.webview.loadURL(url);
@@ -581,10 +620,6 @@ class BrowserTabs {
     public toggleDevTools() {
         const webview = this.getActiveTab()?.webview!;
         webview.isDevToolsOpened() ? webview.closeDevTools() : webview.openDevTools();
-        /*const dev_tool = this.getTab("dev-tools")?.webview!;
-        window.electron.setDevToolsContent(dev_tool.getWebContentsId(), webview.getWebContentsId());
-        this.getTab("dev-tools")?.webview.classList.toggle("active");*/
-        //window.electron.getWebContentsFromId(webview.getWebContentsId())?.setDevToolsWebContents(Electron.webContents.fromId(webview.getWebContentsId())?.devToolsWebContents!);
     }
 }
 
@@ -593,13 +628,10 @@ const browser = new BrowserTabs();
 window.electron.closeActiveTab(() => browser.closeTab(browser.activeTabId!));
 window.electron.changeActiveTab((dir: number) => browser.setActiveTabFromIndex(browser.activeTabIndex! + dir));
 
-window.electron.openSearchBar(() => {
-    browser.showSearchbar(true);
-    browser.updateSearchSuggestions();
-});
+window.electron.openSearchBar(() => browser.showSearchbar(true));
 
 window.electron.toggleFloatingSidebar(() => browser.toggleFloatingSidebar());
-window.electron.toggleHistoryPanel(() => document.getElementById("history-panel")?.classList.toggle("active"));
+window.electron.toggleHistoryPanel(() => browser.toggleHistoryPanel());
 window.electron.focusUrlBar(() => browser.focusSearchbar());
 window.electron.setFullscreen((value: boolean) => document.getElementById("title-bar")?.classList.toggle("hide", value));
 
@@ -610,5 +642,5 @@ window.page.goForward(() => browser.goForward());
 window.webview.toggleDevTools(() => browser.toggleDevTools());
 window.webview.openPopup((details: Electron.HandlerDetails) => browser.createTab(details.url));
 
-window.addEventListener("beforeunload", () => browser.saveTabs());
-window.addEventListener("load", () => browser.loadTabs());
+window.addEventListener("beforeunload", () => browser.saveBrowser());
+window.addEventListener("load", () => browser.loadBrowser());
