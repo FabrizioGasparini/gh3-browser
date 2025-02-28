@@ -28,9 +28,11 @@ class BrowserTabs {
         this.container = document.getElementById("browser-container");
         this.sidebar = document.getElementById("sidebar");
         this.searchFloat = document.getElementById("search-float");
+        this.historyPanel = document.getElementById("history-panel");
         this.searchSuggestions = document.getElementById("search-suggestions");
         this.tabList = document.getElementById("tab-list");
         this.suggestionsList = document.getElementById("suggestions");
+        this.historyList = document.getElementById("history-list");
         this.searchBar = document.getElementById("search-input");
         this.urlBar = document.getElementById("url-bar");
         this.selectedSuggestionIndex = 0;
@@ -108,8 +110,6 @@ class BrowserTabs {
             var _a;
             if (!((_a = e.relatedTarget) === null || _a === void 0 ? void 0 : _a.classList.contains("delete-search-btn")))
                 this.showSearchbar(false);
-            else
-                console.log("TASTO");
         });
         this.tabList.addEventListener("dragstart", (event) => {
             var _a;
@@ -133,12 +133,10 @@ class BrowserTabs {
                     const draggedIndex = Array.from(this.tabList.children).indexOf(draggedElement);
                     const targetIndex = Array.from(this.tabList.children).indexOf(target.parentElement);
                     // Aggiungi il draggedElement prima o dopo il target
-                    if (draggedIndex < targetIndex) {
+                    if (draggedIndex < targetIndex)
                         this.tabList.insertBefore(draggedElement, target.parentElement.nextSibling);
-                    }
-                    else {
+                    else
                         this.tabList.insertBefore(draggedElement, target.parentElement);
-                    }
                     [this.tabs[draggedIndex], this.tabs[targetIndex]] = [this.tabs[targetIndex], this.tabs[draggedIndex]];
                 }
             }
@@ -163,6 +161,11 @@ class BrowserTabs {
             this.searchFloat.classList.remove("active");
         this.searchBar.focus();
         this.selectedSuggestionIndex = 0;
+        this.updateSearchSuggestions();
+    }
+    toggleHistoryPanel() {
+        this.historyPanel.classList.toggle("active");
+        this.updateHistoryList();
     }
     focusSearchbar() {
         this.urlBar.select();
@@ -231,6 +234,37 @@ class BrowserTabs {
         }
         (_a = this.suggestionsList.querySelectorAll(".suggestion")[this.selectedSuggestionIndex]) === null || _a === void 0 ? void 0 : _a.classList.add("active");
     }
+    timeConverter(time) {
+        var a = new Date(time);
+        var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        var year = a.getFullYear();
+        var month = months[a.getMonth()];
+        var date = a.getDate();
+        var hour = a.getHours();
+        var min = a.getMinutes();
+        var sec = a.getSeconds();
+        var converted = date + " " + month + " " + year + " " + hour + ":" + min + ":" + sec;
+        return converted;
+    }
+    updateHistoryList() {
+        this.historyList.innerHTML = "";
+        this.history.forEach((page) => {
+            const elem = document.createElement("li");
+            elem.className = "history-item";
+            elem.innerHTML = `
+                <span class="history-time">
+                    <p>${this.timeConverter(page.timestamp)}</p>
+                </span>
+                <span class="history-text">
+                    <p>${page.title}</p>
+                </span>
+            `;
+            elem.onclick = () => {
+                this.createTab(page.url);
+            };
+            this.historyList.prepend(elem);
+        });
+    }
     moveSearchSuggestions(direction) {
         let items = document.querySelectorAll(".suggestion");
         if (items.length === 0)
@@ -254,12 +288,16 @@ class BrowserTabs {
                 return;
             }
         }
-        if (!tabUrl.includes("://"))
-            if (!tabUrl.startsWith("http"))
+        if (!tabUrl.includes("://")) {
+            if (!tabUrl.startsWith("http")) {
+                console.log(tabUrl);
                 if (!this.isValidUrl(tabUrl))
                     tabUrl = "https://www.google.com/search?q=" + encodeURI(tabUrl) + "&sourceid=chrome&ie=UTF-8";
                 else
                     tabUrl = "https://" + tabUrl;
+            }
+        }
+        console.log(tabUrl);
         const webview = document.createElement("webview");
         webview.setAttribute("src", tabUrl);
         webview.setAttribute("autosize", "on");
@@ -276,6 +314,7 @@ class BrowserTabs {
             visible,
             icon: "https://www.google.com/favicon.ico",
             webview,
+            loaded: false,
         };
         webview.addEventListener("page-title-updated", (e) => {
             tab.title = e.title;
@@ -299,9 +338,13 @@ class BrowserTabs {
             if (forward)
                 forward.style.color = webview.canGoForward() ? "#fff" : "#808080";
             (_a = document.querySelector('meta[name="color-scheme"]')) === null || _a === void 0 ? void 0 : _a.setAttribute("content", "dark");
-            this.history.push({ title: tab.title, url: tab.url, timestamp: Date.now() });
         });
         webview.addEventListener("dom-ready", () => {
+            var _a;
+            tab.loaded = true;
+            if (open)
+                if (tab.url != ((_a = this.history[this.history.length - 1]) === null || _a === void 0 ? void 0 : _a.url))
+                    this.history.push({ title: tab.title, url: tab.url, timestamp: Date.now() });
             webview.executeJavaScript(`
                 (function() {
                     function fixBackground() {
@@ -382,7 +425,7 @@ class BrowserTabs {
         });
         return tabElement;
     }
-    saveTabs() {
+    saveBrowser() {
         const tabs = this.tabs;
         const tabData = Array.from(tabs).map((tab) => {
             return {
@@ -395,7 +438,7 @@ class BrowserTabs {
         localStorage.setItem("suggestionsHistory", JSON.stringify(this.suggestionsHistory));
         localStorage.setItem("history", JSON.stringify(this.history));
     }
-    loadTabs() {
+    loadBrowser() {
         const savedTabs = JSON.parse(localStorage.getItem("tabs") || "[]");
         savedTabs.forEach((tab) => {
             const newTab = this.createTab(tab.url, "", false);
@@ -408,19 +451,6 @@ class BrowserTabs {
         this.setActiveTab(localStorage.getItem("activeTab") || this.tabs[0].id);
         this.suggestionsHistory = JSON.parse(localStorage.getItem("suggestionsHistory") || "{}");
         this.history = JSON.parse(localStorage.getItem("history") || "[]");
-        const historyPanel = document.getElementById("history-panel");
-        const historyList = document.getElementById("history-list");
-        const historySearch = document.getElementById("history-search");
-        const openHistory = document.getElementById("open-history");
-        const closeHistory = document.getElementById("close-history");
-        const clearHistory = document.getElementById("clear-history");
-        historyList.innerHTML = "";
-        this.history.forEach((entry) => {
-            let li = document.createElement("li");
-            li.innerHTML = `<strong>${entry.title}</strong> <br> <small>${entry.url}</small>`;
-            li.addEventListener("click", () => window.open(entry.url));
-            historyList.appendChild(li);
-        });
     }
     updateTabs() {
         this.tabList.innerHTML = "";
@@ -455,6 +485,7 @@ class BrowserTabs {
             t.webview.classList.toggle("active", tab.id == t.id);
         });
         this.urlBar.value = tab.url;
+        this.updateHistoryList();
         this.updateTabs();
     }
     closeTab(id) {
@@ -490,12 +521,14 @@ class BrowserTabs {
                 return;
             }
         }
-        if (!url.includes("://"))
-            if (!url.startsWith("http"))
+        if (!url.includes("://")) {
+            if (!url.startsWith("http")) {
                 if (!this.isValidUrl(url))
                     url = "https://www.google.com/search?q=" + encodeURI(url) + "&sourceid=chrome&ie=UTF-8";
                 else
                     url = "http://" + url;
+            }
+        }
         if (!tab)
             this.createTab(url);
         else
@@ -519,21 +552,14 @@ class BrowserTabs {
         var _a;
         const webview = (_a = this.getActiveTab()) === null || _a === void 0 ? void 0 : _a.webview;
         webview.isDevToolsOpened() ? webview.closeDevTools() : webview.openDevTools();
-        /*const dev_tool = this.getTab("dev-tools")?.webview!;
-        window.electron.setDevToolsContent(dev_tool.getWebContentsId(), webview.getWebContentsId());
-        this.getTab("dev-tools")?.webview.classList.toggle("active");*/
-        //window.electron.getWebContentsFromId(webview.getWebContentsId())?.setDevToolsWebContents(Electron.webContents.fromId(webview.getWebContentsId())?.devToolsWebContents!);
     }
 }
 const browser = new BrowserTabs();
 window.electron.closeActiveTab(() => browser.closeTab(browser.activeTabId));
 window.electron.changeActiveTab((dir) => browser.setActiveTabFromIndex(browser.activeTabIndex + dir));
-window.electron.openSearchBar(() => {
-    browser.showSearchbar(true);
-    browser.updateSearchSuggestions();
-});
+window.electron.openSearchBar(() => browser.showSearchbar(true));
 window.electron.toggleFloatingSidebar(() => browser.toggleFloatingSidebar());
-window.electron.toggleHistoryPanel(() => { var _a; return (_a = document.getElementById("history-panel")) === null || _a === void 0 ? void 0 : _a.classList.toggle("active"); });
+window.electron.toggleHistoryPanel(() => browser.toggleHistoryPanel());
 window.electron.focusUrlBar(() => browser.focusSearchbar());
 window.electron.setFullscreen((value) => { var _a; return (_a = document.getElementById("title-bar")) === null || _a === void 0 ? void 0 : _a.classList.toggle("hide", value); });
 window.page.reload(() => browser.reload());
@@ -541,5 +567,5 @@ window.page.goBack(() => browser.goBack());
 window.page.goForward(() => browser.goForward());
 window.webview.toggleDevTools(() => browser.toggleDevTools());
 window.webview.openPopup((details) => browser.createTab(details.url));
-window.addEventListener("beforeunload", () => browser.saveTabs());
-window.addEventListener("load", () => browser.loadTabs());
+window.addEventListener("beforeunload", () => browser.saveBrowser());
+window.addEventListener("load", () => browser.loadBrowser());

@@ -155,11 +155,9 @@ class BrowserTabs {
                     const targetIndex = Array.from(this.tabList.children).indexOf(target.parentElement);
 
                     // Aggiungi il draggedElement prima o dopo il target
-                    if (draggedIndex < targetIndex) 
-                        this.tabList.insertBefore(draggedElement, target.parentElement.nextSibling);
-                    else
-                        this.tabList.insertBefore(draggedElement, target.parentElement);
-                    
+                    if (draggedIndex < targetIndex) this.tabList.insertBefore(draggedElement, target.parentElement.nextSibling);
+                    else this.tabList.insertBefore(draggedElement, target.parentElement);
+
                     [this.tabs[draggedIndex], this.tabs[targetIndex]] = [this.tabs[targetIndex], this.tabs[draggedIndex]];
                 }
             }
@@ -186,12 +184,12 @@ class BrowserTabs {
         else this.searchFloat.classList.remove("active");
         this.searchBar.focus();
         this.selectedSuggestionIndex = 0;
-        this.updateSearchSuggestions()
+        this.updateSearchSuggestions();
     }
 
     public toggleHistoryPanel() {
         this.historyPanel.classList.toggle("active");
-        this.updateHistoryList()
+        this.updateHistoryList();
     }
 
     public focusSearchbar() {
@@ -272,23 +270,40 @@ class BrowserTabs {
         this.suggestionsList.querySelectorAll(".suggestion")[this.selectedSuggestionIndex]?.classList.add("active");
     }
 
+    private timeConverter(time: number) {
+        var a = new Date(time);
+        var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        var year = a.getFullYear();
+        var month = months[a.getMonth()];
+        var date = a.getDate();
+        var hour = a.getHours();
+        var min = a.getMinutes();
+        var sec = a.getSeconds();
+        var converted = date + " " + month + " " + year + " " + hour + ":" + min + ":" + sec;
+        return converted;
+    }
+
     public updateHistoryList() {
         this.historyList.innerHTML = "";
 
         this.history.forEach((page) => {
             const elem = document.createElement("li");
-            elem.className = "page";
+            elem.className = "history-item";
             elem.innerHTML = `
-                <div class="left">
+                <span class="history-time">
+                    <p>${this.timeConverter(page.timestamp)}</p>
+                </span>
+                <span class="history-text">
                     <p>${page.title}</p>
-                </div>
-                <div class="center">
-                    <p>${page.url}</p>
-                </div>
+                </span>
             `;
 
-            this.historyList.appendChild(elem)
-        })
+            elem.onclick = () => {
+                this.createTab(page.url);
+            };
+
+            this.historyList.prepend(elem);
+        });
     }
 
     public moveSearchSuggestions(direction: string) {
@@ -319,13 +334,13 @@ class BrowserTabs {
 
         if (!tabUrl.includes("://")) {
             if (!tabUrl.startsWith("http")) {
-                console.log(tabUrl)
+                console.log(tabUrl);
                 if (!this.isValidUrl(tabUrl)) tabUrl = "https://www.google.com/search?q=" + encodeURI(tabUrl) + "&sourceid=chrome&ie=UTF-8";
                 else tabUrl = "https://" + tabUrl;
             }
         }
 
-        console.log(tabUrl)
+        console.log(tabUrl);
 
         const webview = document.createElement("webview");
         webview.setAttribute("src", tabUrl);
@@ -345,7 +360,7 @@ class BrowserTabs {
             visible,
             icon: "https://www.google.com/favicon.ico",
             webview,
-            loaded: false
+            loaded: false,
         };
 
         webview.addEventListener("page-title-updated", (e) => {
@@ -364,7 +379,7 @@ class BrowserTabs {
 
         webview.addEventListener("did-navigate", (e) => {
             tab.url = e.url;
-            
+
             if (this.activeTabId == id) this.urlBar.value = e.url;
 
             const back = document.getElementById("back");
@@ -373,12 +388,11 @@ class BrowserTabs {
             const forward = document.getElementById("forward");
             if (forward) forward.style.color = webview.canGoForward() ? "#fff" : "#808080";
             document.querySelector('meta[name="color-scheme"]')?.setAttribute("content", "dark");
-
         });
-        
+
         webview.addEventListener("dom-ready", () => {
             tab.loaded = true;
-            this.history.push({ title: tab.title, url: tab.url, timestamp: Date.now() } as HistoryElement);
+            if (open) if (tab.url != this.history[this.history.length - 1]?.url) this.history.push({ title: tab.title, url: tab.url, timestamp: Date.now() } as HistoryElement);
 
             webview.executeJavaScript(`
                 (function() {
@@ -538,6 +552,7 @@ class BrowserTabs {
         });
 
         this.urlBar.value = tab.url;
+        this.updateHistoryList();
         this.updateTabs();
     }
 
