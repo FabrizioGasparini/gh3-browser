@@ -8,7 +8,7 @@ declare global {
             openSearchBar: (callback: () => void) => void;
             toggleFloatingSidebar: (callback: () => void) => void;
             focusUrlBar: (callback: () => void) => void;
-            toggleHistoryPanel: (callback: () => void) => void;
+            openHistoryPanel: (callback: () => void) => void;
 
             closeWindow: () => void;
             minimizeWindow: () => void;
