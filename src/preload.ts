@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld("electron", {
     toggleFloatingSidebar: (callback: () => void) => ipcRenderer.on("toggle-floating-sidebar", callback),
     focusUrlBar: (callback: () => void) => ipcRenderer.on("focus-url-bar", callback),
     openHistoryPanel: (callback: () => void) => ipcRenderer.on("open-history-panel", callback),
+    openGLinksPanel: (callback: () => void) => ipcRenderer.on("open-glinks-panel", callback),
 
     closeWindow: () => ipcRenderer.send("close-window"),
     minimizeWindow: () => ipcRenderer.send("minimize-window"),

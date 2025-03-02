@@ -101,6 +101,7 @@ electron_1.app.on("browser-window-focus", () => {
     registerShortcut("CommandOrControl+S", () => mainWindow.webContents.send("toggle-floating-sidebar"));
     registerShortcut("CommandOrControl+L", () => mainWindow.webContents.send("focus-url-bar"));
     registerShortcut("CommandOrControl+H", () => mainWindow.webContents.send("open-history-panel"));
+    registerShortcut("CommandOrControl+G", () => mainWindow.webContents.send("open-glinks-panel"));
     registerShortcut("Alt+Up", () => mainWindow.webContents.send("change-active-tab", -1));
     registerShortcut("Alt+Down", () => mainWindow.webContents.send("change-active-tab", 1));
     registerShortcut("CommandOrControl+Tab", () => mainWindow.webContents.send("change-active-tab", 1));

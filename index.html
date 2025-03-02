@@ -42,12 +42,37 @@
                 <h2>Di Fabrizio Gasparini</h2>
                 <p>Premi CTRL+T per creare una nuova scheda</p>
             </div>
+            <div id="popup-panel">
+                <div class="popup">
+                    <div class="panel-header">
+                        <p class="panel-title">Popup Title</p>
+                    </div>
+                    <div id="popup-content">
+                    </div>
+                    <div class="popup-actions">
+                        <p id="popup-error"></p>
+                        <div class="actions">
+                            <button id="popup-cancel" class="popup-button btn">Annulla</button>
+                            <button id="popup-confirm" class="popup-button btn">Aggiungi</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div id="history-panel">
-                <div id="history-header">
+                <div class="panel-header">
                     <h2>Cronologia</h2>
                 </div>
                 <input type="text" id="history-search" placeholder="Cerca nella cronologia...">
                 <ul id="history-list"></ul>
+            </div>
+            <div id="glinks-panel">
+                <div class="panel-header">
+                    <h2>Gh3 Links</h2>
+                </div>
+                <ul id="glinks-list">
+                    <div class="glinks-group" id="default-glinks"></div>
+                    <div class="glinks-group" id="custom-glinks"></div>
+                </ul>
             </div>
         </div>
         <div id="search-float">

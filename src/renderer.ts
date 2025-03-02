@@ -20,16 +20,20 @@ class BrowserTabs {
     public activeTabIndex: number | null = null;
     public suggestionsHistory: { [key: string]: [string, string] } = {};
     public history: HistoryElement[] = [];
-    public historyOpen: boolean = false;
+    public customGLinks: { [key: string]: { [url: string]: string } } = {};
 
     public container: HTMLElement;
     public sidebar: HTMLElement;
     public searchFloat: HTMLElement;
     public historyPanel: HTMLElement;
+    public gLinksPanel: HTMLElement;
+    public popupPanel: HTMLElement;
     public searchSuggestions: HTMLElement;
     public tabList: HTMLElement;
     public suggestionsList: HTMLElement;
     public historyList: HTMLElement;
+    public defaultGLinksList: HTMLElement;
+    public customGLinksList: HTMLElement;
 
     public selectedSuggestionIndex: number;
     public suggestionsURLs: string[] = [];
@@ -38,15 +42,51 @@ class BrowserTabs {
     public urlBar: HTMLInputElement;
     public historySearch: HTMLInputElement;
 
+    public gLinks: { [key: string]: { [url: string]: string } } = {
+        w: { url: "https://en.wikipedia.org/wiki/%s", title: "Wikipedia" },
+        yt: { url: "https://www.youtube.com/results?search_query=%s", title: "YouTube" },
+        gi: { url: "http://www.google.com/search?q=%s&tbm=isch", title: "Google Images" },
+        gh: { url: "https://github.com/search?q=%s", title: "GitHub" },
+        gpt: { url: "https://chat.openai.com/?q=%s", title: "ChatGPT" },
+
+        az: { url: "https://www.amazon.com/s?k=%s", title: "Amazon" },
+        eb: { url: "https://www.ebay.com/sch/i.html?_nkw=%s", title: "eBay" },
+
+        so: { url: "https://stackoverflow.com/search?q=%s", title: "StackOverflow" },
+
+        tw: { url: "https://twitter.com/search?q=%s", title: "Twitter" },
+        fb: { url: "https://www.facebook.com/search/top/?q=%s", title: "Facebook" },
+        ig: { url: "https://www.instagram.com/%s", title: "Instagram" },
+        twitch: { url: "https://www.twitch.tv/%s", title: "Twitch" },
+        sp: { url: "https://open.spotify.com/search/%s", title: "Spotify" },
+
+        gmail: { url: "https://mail.google.com/mail/u/0/", title: "Gmail" },
+        maps: { url: "https://google.com/maps", title: "Google Maps" },
+        cal: { url: "https://calendar.google.com/calendar/u/0/r", title: "Google Calendar" },
+        drive: { url: "https://drive.google.com/drive/u/0/home", title: "Google Drive" },
+        docs: { url: "https://docs.google.com/document/u/0/", title: "Google Docs" },
+        sheets: { url: "https://docs.google.com/spreadsheets/u/0/", title: "Google Sheets" },
+        slides: { url: "https://docs.google.com/presentation/u/0/", title: "Google Slides" },
+        photos: { url: "https://photos.google.com/", title: "Google Photos" },
+        meet: { url: "https://meet.google.com/", title: "Google Meet" },
+
+        trans: { url: "https://translate.google.com/", title: "Google Translate" },
+    };
+
     constructor() {
         this.container = document.getElementById("browser-container")!;
         this.sidebar = document.getElementById("sidebar")!;
         this.searchFloat = document.getElementById("search-float")!;
         this.historyPanel = document.getElementById("history-panel")!;
+        this.gLinksPanel = document.getElementById("glinks-panel")!;
+        this.popupPanel = document.getElementById("popup-panel")!;
         this.searchSuggestions = document.getElementById("search-suggestions")!;
         this.tabList = document.getElementById("tab-list")!;
         this.suggestionsList = document.getElementById("suggestions")!;
         this.historyList = document.getElementById("history-list")!;
+        this.defaultGLinksList = document.getElementById("default-glinks")!;
+        this.customGLinksList = document.getElementById("custom-glinks")!;
+
         this.searchBar = document.getElementById("search-input") as HTMLInputElement;
         this.urlBar = document.getElementById("url-bar") as HTMLInputElement;
         this.historySearch = document.getElementById("history-search") as HTMLInputElement;
@@ -105,12 +145,8 @@ class BrowserTabs {
                     break;
 
                 case "Enter":
-                    if (this.searchBar.value == "") {
-                        if (this.selectedSuggestionIndex != -1 && this.suggestionsURLs.length != 0) this.createTab(this.suggestionsURLs[this.selectedSuggestionIndex]);
-                    } else {
-                        if (this.selectedSuggestionIndex == -1 || this.suggestionsURLs.length == 0) this.createTab(this.searchBar.value);
-                        else this.createTab(this.suggestionsURLs[this.selectedSuggestionIndex]);
-                    }
+                    const query = this.searchBar.value.trim();
+                    this.handleSearchQuery(query);
 
                     this.showSearchbar(false);
                     this.suggestionsList.innerHTML = "";
@@ -194,26 +230,113 @@ class BrowserTabs {
         this.updateSearchSuggestions();
     }
 
+    public focusSearchbar() {
+        this.urlBar.select();
+        this.sidebar.classList.remove("floating");
+    }
+
     public showHistoryPanel(active: boolean) {
         this.historyPanel.classList.toggle("active", active);
         this.updateHistoryList();
     }
 
     public openHistory() {
-        this.historyOpen = true;
         this.showHistoryPanel(true);
 
         if (this.getTab("history")) this.setActiveTab("history");
         else this.createTab("gh3b://history");
     }
 
-    public focusSearchbar() {
-        this.urlBar.select();
-        this.sidebar.classList.remove("floating");
+    public showGLinksPanel(active: boolean) {
+        this.gLinksPanel.classList.toggle("active", active);
+        this.updateGLinksList();
     }
 
-    private escapeHTML(html: string): string {
-        return html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    public openGLinks() {
+        this.showGLinksPanel(true);
+
+        if (this.getTab("glinks")) this.setActiveTab("glinks");
+        else this.createTab("gh3b://glinks");
+    }
+
+    public createGLink(title: string, shortcut: string, url: string, edit: boolean = false) {
+        if (shortcut == "" || title == "" || url == "") {
+            this.popupPanel.querySelector("#popup-error")!.innerHTML = "Tutti i campi sono obbligatori";
+            return;
+        }
+        if (this.customGLinks[shortcut] && !edit) {
+            this.popupPanel.querySelector("#popup-error")!.innerHTML = "Shortcut già esistente";
+            return;
+        }
+        if (!this.customGLinks[shortcut] && this.gLinks[shortcut]) {
+            this.popupPanel.querySelector("#popup-error")!.innerHTML = "Shortcut già esistente";
+            return;
+        }
+        if (!this.isValidUrl(url)) {
+            this.popupPanel.querySelector("#popup-error")!.innerHTML = "URL non valido";
+            return;
+        }
+
+        this.gLinks[shortcut] = { title, url };
+        this.customGLinks[shortcut] = { title, url };
+        this.popupPanel.querySelector("#popup-error")!.innerHTML = "";
+        this.updateGLinksList();
+        this.showPopup(false);
+    }
+
+    private openGLinksPopup(edit: boolean = false, title: string = "", shortcut: string = "", url: string = "") {
+        const popupContent = this.popupPanel.querySelector("#popup-content") as HTMLElement;
+        popupContent.innerHTML = "";
+
+        const titleInput = document.createElement("div");
+        titleInput.className = "popup-field";
+        titleInput.innerHTML = '<label class="popup-text" for="glink-name">Nome</><input type="text" id="glink-name" placeholder="Nome..." class="popup-input" />';
+        popupContent.appendChild(titleInput);
+        if (title != "") popupContent.querySelector("#glink-name")!.setAttribute("value", title);
+
+        const glinkInput = document.createElement("div");
+        glinkInput.className = "popup-field";
+        glinkInput.innerHTML = '<label class="popup-text" for="glink-shortcut">Shortcut</><input type="text" id="glink-shortcut" placeholder="Shortcut..." class="popup-input" />';
+        popupContent.appendChild(glinkInput);
+        if (shortcut != "") popupContent.querySelector("#glink-shortcut")!.setAttribute("value", shortcut);
+
+        const urlInput = document.createElement("div");
+        urlInput.className = "popup-field";
+        urlInput.innerHTML = '<label class="popup-text" for="glink-url">URL (%s al posto della query)</><input type="text" id="glink-url" placeholder="https://www.example.com?query=%s" class="popup-input" />';
+        popupContent.appendChild(urlInput);
+        if (url != "") popupContent.querySelector("#glink-url")!.setAttribute("value", url);
+
+        this.popupPanel.querySelector(".panel-title")!.innerHTML = "Aggiungi GLink";
+        this.popupPanel.querySelector("#popup-cancel")!.innerHTML = "Annulla";
+        this.popupPanel.querySelector("#popup-cancel")!.addEventListener("click", () => {
+            this.showPopup(false);
+        });
+
+        this.popupPanel.querySelector("#popup-confirm")!.innerHTML = "Aggiungi";
+        this.popupPanel.querySelector("#popup-confirm")!.addEventListener("click", () => {
+            this.createGLink((popupContent.querySelector("#glink-name") as HTMLInputElement).value, (popupContent.querySelector("#glink-shortcut") as HTMLInputElement).value, (popupContent.querySelector("#glink-url") as HTMLInputElement).value, edit);
+        });
+    }
+
+    public showPopup(active: boolean) {
+        this.popupPanel.classList.toggle("active", active);
+    }
+
+    public handleSearchQuery(query: string) {
+        const gLinkRegex = /^-(\w+)\s*(.*)$/;
+        const match = query.match(gLinkRegex);
+
+        if (match) {
+            const gLink = match[1].toLowerCase();
+            const searchQuery = match[2];
+
+            if (this.gLinks[gLink]) this.createTab(this.gLinks[gLink]["url"].replace("%s", searchQuery));
+            else this.createTab(query);
+        } else {
+            if (query == "") {
+                if (this.selectedSuggestionIndex != -1 && this.suggestionsURLs.length != 0) this.createTab(this.suggestionsURLs[this.selectedSuggestionIndex]);
+            } else this.createTab(this.selectedSuggestionIndex == -1 || this.suggestionsURLs.length == 0 ? this.searchBar.value : this.suggestionsURLs[this.selectedSuggestionIndex]);
+        }
     }
 
     public updateSearchSuggestions() {
@@ -298,14 +421,6 @@ class BrowserTabs {
         this.suggestionsList.querySelectorAll(".suggestion")[this.selectedSuggestionIndex]?.classList.add("active");
     }
 
-    private formatDate(dateString: number) {
-        return new Date(dateString).toLocaleDateString("it-IT", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-    }
-
-    private formatTime(dateString: number) {
-        return new Date(dateString).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
-    }
-
     public updateHistoryList() {
         this.historyList.innerHTML = "";
 
@@ -329,7 +444,7 @@ class BrowserTabs {
                 groupedHistory[date]
                     .sort((a, b) => a.timestamp - b.timestamp)
                     .forEach((item) => {
-                        const historyItem = document.createElement("div");
+                        const historyItem = document.createElement("li");
                         historyItem.classList.add("history-item");
                         historyItem.innerHTML = `
                             <span class="history-text">${item.title}<p>${item.url}</p></span>
@@ -366,6 +481,57 @@ class BrowserTabs {
 
                 this.historyList.appendChild(dayContainer);
             });
+    }
+
+    public updateGLinksList() {
+        this.defaultGLinksList.innerHTML = "<span class='glinks-title'>Default GLinks</span>";
+        this.customGLinksList.innerHTML = "<span class='glinks-title'>Custom GLinks</span>";
+
+        for (let key in this.gLinks) {
+            const gLink = document.createElement("li");
+            gLink.className = key in this.customGLinks ? "glink custom" : "glink";
+            gLink.innerHTML = `
+                <div class="left">
+                    <img class="glink-icon" src="http://www.google.com/s2/favicons?sz=32&domain=${this.gLinks[key]["url"]}"></img>
+                    <span class="glink-title">${this.gLinks[key]["title"]}</span>
+                    <span class="glink-shortcut">${key}</span>
+                </div>
+                <span class="glink-url">${this.gLinks[key]["url"]}</span>
+            `;
+
+            if (key in this.customGLinks) {
+                const btn = document.createElement("button");
+                btn.className = "tab-close delete-search-btn";
+                btn.innerText = "✕";
+                btn.onclick = () => {
+                    delete this.customGLinks[key];
+                    delete this.gLinks[key];
+                    this.updateGLinksList();
+                };
+
+                gLink.appendChild(btn);
+
+                gLink.onclick = (e) => {
+                    if ((e.target as HTMLElement).classList.contains("tab-close")) return;
+
+                    this.openGLinksPopup(true, this.gLinks[key]["title"], key, this.gLinks[key]["url"]);
+                    this.showPopup(true);
+                };
+            }
+
+            if (key in this.customGLinks) this.customGLinksList.appendChild(gLink);
+            else this.defaultGLinksList.appendChild(gLink);
+        }
+
+        const addGLink = document.createElement("button");
+        addGLink.id = "add-glink";
+        addGLink.innerHTML = '<i class="fa fa-plus"></i>';
+        addGLink.onclick = () => {
+            this.openGLinksPopup();
+            this.showPopup(true);
+        };
+
+        this.customGLinksList.appendChild(addGLink);
     }
 
     public moveSearchSuggestions(direction: string) {
@@ -410,6 +576,27 @@ class BrowserTabs {
                     this.updateTabs();
 
                     return historyTab;
+
+                case "glinks":
+                    const gLinksTab: Tab = {
+                        id: "glinks",
+                        title: "Gh3 Links",
+                        url: tabUrl,
+                        visible,
+                        icon: "https://www.google.com/favicon.ico",
+                        webview: undefined,
+                        loaded: false,
+                    };
+
+                    this.showGLinksPanel(true);
+                    this.tabs.push(gLinksTab);
+
+                    if (!open) return gLinksTab;
+
+                    this.setActiveTab("glinks");
+                    this.updateTabs();
+
+                    return gLinksTab;
 
                 default:
                     const tab = this.getTab(param);
@@ -456,6 +643,13 @@ class BrowserTabs {
         webview.addEventListener("page-title-updated", (e) => {
             tab.title = e.title;
             this.suggestionsHistory[webview.getURL().startsWith("https://www.google.com/search?q=") ? url : webview.getURL()] = [tab.title, tab.icon || ""];
+            // trova la tab corrente e aggiorna il titolo nella cronologia
+            this.history.forEach((item) => {
+                if (item.url == tab.url) {
+                    item.title = tab.title;
+                    return;
+                }
+            });
 
             this.updateTabs();
         });
@@ -578,38 +772,6 @@ class BrowserTabs {
         return tabElement;
     }
 
-    public saveBrowser() {
-        const tabs = this.tabs;
-        const tabData = Array.from(tabs).map((tab) => {
-            return {
-                id: tab.id,
-                url: tab.url,
-            };
-        });
-        localStorage.setItem("tabs", JSON.stringify(tabData));
-        localStorage.setItem("activeTab", this.activeTabId!);
-        localStorage.setItem("suggestionsHistory", JSON.stringify(this.suggestionsHistory));
-        localStorage.setItem("history", JSON.stringify(this.history));
-    }
-
-    public loadBrowser() {
-        const savedTabs = JSON.parse(localStorage.getItem("tabs") || "[]");
-        savedTabs.forEach((tab: { id: string; url: string }) => {
-            const newTab = this.createTab(tab.url, "", "", false)!;
-            newTab.id = tab.id;
-        });
-
-        if (this.tabs.length == 0) {
-            this.showSearchbar(true);
-            this.updateSearchSuggestions();
-        }
-
-        this.setActiveTab(localStorage.getItem("activeTab") || this.tabs[0].id);
-        this.suggestionsHistory = JSON.parse(localStorage.getItem("suggestionsHistory") || "{}");
-        this.history = JSON.parse(localStorage.getItem("history") || "[]");
-        this.updateHistoryList();
-    }
-
     public updateTabs() {
         this.tabList.innerHTML = "";
         this.tabs.forEach((tab) => {
@@ -622,8 +784,17 @@ class BrowserTabs {
         const tab = this.tabs.find((tab) => tab.id == id);
         if (!tab) return;
 
-        this.historyOpen = id == "history";
-        this.showHistoryPanel(id == "history");
+        this.showHistoryPanel(false);
+        this.showGLinksPanel(false);
+        switch (id) {
+            case "history":
+                this.showHistoryPanel(true);
+                break;
+
+            case "glinks":
+                this.showGLinksPanel(true);
+                break;
+        }
 
         this.activeTabIndex = this.tabs.indexOf(tab);
 
@@ -642,8 +813,17 @@ class BrowserTabs {
         const tab = this.tabs[index];
         if (!tab) return;
 
-        this.historyOpen = tab.id == "history";
-        this.showHistoryPanel(tab.id == "history");
+        this.showHistoryPanel(false);
+        this.showGLinksPanel(false);
+        switch (tab.id) {
+            case "history":
+                this.showHistoryPanel(true);
+                break;
+
+            case "glinks":
+                this.showGLinksPanel(true);
+                break;
+        }
 
         this.activeTabId = tab.id;
         this.activeTabIndex = index;
@@ -653,7 +833,10 @@ class BrowserTabs {
         });
 
         this.urlBar.value = tab.url;
+
         this.updateHistoryList();
+        this.updateGLinksList();
+        this.updateSearchSuggestions();
         this.updateTabs();
     }
 
@@ -661,9 +844,14 @@ class BrowserTabs {
         const index = this.tabs.findIndex((tab) => tab.id == id);
         if (index == -1) return;
 
-        if (id == "history") {
-            this.historyOpen = false;
-            this.showHistoryPanel(false);
+        switch (id) {
+            case "glinks":
+                this.showGLinksPanel(false);
+                break;
+
+            case "history":
+                this.showHistoryPanel(false);
+                break;
         }
 
         this.tabs[index].webview?.remove();
@@ -689,18 +877,45 @@ class BrowserTabs {
         return this.tabs.find((tab) => tab.id == id);
     }
 
-    public isValidUrl = (urlString: string) => {
-        var urlPattern = new RegExp(
-            "^(https?:\\/\\/)?" + // protocollo
-            "((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|" + // nome dominio
-            "((\\d{1,3}\\.){3}\\d{1,3}))" + // o indirizzo ip (v4)
-            "(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*" + // porta e percorso
-            "(\\?[;&a-z\\d%_.~+=-]*)?" + // query string
-                "(\\#[-a-z\\d_]*)?$",
-            "i"
-        ); // fragment locator
-        return !!urlPattern.test(urlString);
-    };
+    public saveBrowser() {
+        const tabs = this.tabs;
+        const tabData = Array.from(tabs).map((tab) => {
+            return {
+                id: tab.id,
+                url: tab.url,
+            };
+        });
+
+        localStorage.setItem("tabs", JSON.stringify(tabData));
+        localStorage.setItem("activeTab", this.activeTabId!);
+        localStorage.setItem("suggestionsHistory", JSON.stringify(this.suggestionsHistory));
+        localStorage.setItem("history", JSON.stringify(this.history));
+        localStorage.setItem("userGLinks", JSON.stringify(this.customGLinks));
+    }
+
+    public loadBrowser() {
+        const savedTabs = JSON.parse(localStorage.getItem("tabs") || "[]");
+        savedTabs.forEach((tab: { id: string; url: string }) => {
+            const newTab = this.createTab(tab.url, "", "", false)!;
+            newTab.id = tab.id;
+        });
+
+        if (this.tabs.length == 0) {
+            this.showSearchbar(true);
+            this.updateSearchSuggestions();
+        }
+
+        this.setActiveTab(localStorage.getItem("activeTab") || this.tabs[0].id);
+
+        this.suggestionsHistory = JSON.parse(localStorage.getItem("suggestionsHistory") || "{}");
+
+        this.history = JSON.parse(localStorage.getItem("history") || "[]");
+        this.updateHistoryList();
+
+        this.customGLinks = JSON.parse(localStorage.getItem("userGLinks") || "{}");
+        this.gLinks = { ...this.gLinks, ...this.customGLinks };
+        this.updateGLinksList();
+    }
 
     public goBack() {
         const tab = this.getActiveTab();
@@ -720,6 +935,31 @@ class BrowserTabs {
         const webview = this.getActiveTab()?.webview!;
         webview.isDevToolsOpened() ? webview.closeDevTools() : webview.openDevTools();
     }
+
+    private escapeHTML(html: string): string {
+        return html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    private formatDate(dateString: number) {
+        return new Date(dateString).toLocaleDateString("it-IT", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+    }
+
+    private formatTime(dateString: number) {
+        return new Date(dateString).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+    }
+
+    private isValidUrl = (urlString: string) => {
+        var urlPattern = new RegExp(
+            "^(https?:\\/\\/)?" + // protocollo
+            "((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|" + // nome dominio
+            "((\\d{1,3}\\.){3}\\d{1,3}))" + // o indirizzo ip (v4)
+            "(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*" + // porta e percorso
+            "(\\?[;&a-z\\d%_.~+=-]*)?" + // query string
+                "(\\#[-a-z\\d_]*)?$",
+            "i"
+        ); // fragment locator
+        return !!urlPattern.test(urlString);
+    };
 }
 
 const browser = new BrowserTabs();
@@ -731,6 +971,7 @@ window.electron.openSearchBar(() => browser.showSearchbar(true));
 
 window.electron.toggleFloatingSidebar(() => browser.toggleFloatingSidebar());
 window.electron.openHistoryPanel(() => browser.openHistory());
+window.electron.openGLinksPanel(() => browser.openGLinks());
 window.electron.focusUrlBar(() => browser.focusSearchbar());
 window.electron.setFullscreen((value: boolean) => document.getElementById("title-bar")?.classList.toggle("hide", value));
 

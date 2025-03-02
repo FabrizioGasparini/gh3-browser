@@ -9,6 +9,7 @@ declare global {
             toggleFloatingSidebar: (callback: () => void) => void;
             focusUrlBar: (callback: () => void) => void;
             openHistoryPanel: (callback: () => void) => void;
+            openGLinksPanel: (callback: () => void) => void;
 
             closeWindow: () => void;
             minimizeWindow: () => void;
