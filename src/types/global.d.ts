@@ -30,5 +30,12 @@ declare global {
             openPopup: (callback: (details: Electron.HandlerDetails) => void) => string;
             toggleDevTools: (callback: () => void) => string;
         };
+
+        auth: {
+            loginWithEmail: (email: string, password: string) => void;
+            loginWithGoogle: () => void;
+            loginWithGithub: () => void;
+            loginAnonymously: () => void;
+        };
     }
 }

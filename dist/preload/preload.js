@@ -25,3 +25,9 @@ electron_1.contextBridge.exposeInMainWorld("webview", {
     openPopup: (callback) => electron_1.ipcRenderer.on("open-popup", (event, details) => callback(details)),
     toggleDevTools: (callback) => electron_1.ipcRenderer.on("toggle-devtools", callback),
 });
+electron_1.contextBridge.exposeInMainWorld("auth", {
+    loginWithEmail: (email, password) => electron_1.ipcRenderer.invoke("login:email", email, password),
+    loginWithGoogle: () => electron_1.ipcRenderer.invoke("login:google"),
+    loginWithGithub: () => electron_1.ipcRenderer.invoke("login:github"),
+    loginAnonymously: () => electron_1.ipcRenderer.invoke("login:anonymous"),
+});

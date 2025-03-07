@@ -3,11 +3,16 @@
     "version": "1.0.0",
     "main": "src/main.ts",
     "scripts": {
-        "start": "clear && tsc && electron ./dist/main.js",
+        "start": "clear && tsc && electron ./dist/main/main.js",
         "build": "tsc"
     },
     "keywords": [],
-    "author": "",
+    "protocols": {
+        "schemes": [
+            "gh3b"
+        ]
+    },
+    "author": "FabrizioGasparini",
     "license": "ISC",
     "description": "",
     "devDependencies": {
@@ -15,5 +20,9 @@
         "@types/node": "^22.13.0",
         "electron": "^34.0.2",
         "typescript": "^5.7.3"
+    },
+    "dependencies": {
+        "dotenv": "^16.4.7",
+        "firebase": "^11.4.0"
     }
 }
