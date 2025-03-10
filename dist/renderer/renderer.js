@@ -128,7 +128,7 @@ class GLinksManager {
             gLink.className = key in this.customGLinks ? "glink custom" : "glink";
             gLink.innerHTML = `
                     <div class="left">
-                        <img class="glink-icon" src="http://www.google.com/s2/favicons?sz=32&domain=${this.gLinks[key]["url"]}"></img>
+                        <img class="glink-icon" src="http://www.google.com/s2/favicons?sz=32&domain=${this.gLinks[key]["url"]}" onerror="this.onerror=null;this.src='https://www.google.com/favicon.ico';"></img>
                         <span class="glink-title">${this.gLinks[key]["title"]}</span>
                         <span class="glink-shortcut">${key}</span>
                     </div>
@@ -301,17 +301,11 @@ class SearchManager {
                     break;
                 case "ArrowUp":
                     e.preventDefault();
-                    this.selectedSuggestionIndex -= 1;
-                    if (this.selectedSuggestionIndex < 0)
-                        this.selectedSuggestionIndex = this.suggestionsURLs.length - 1;
-                    this.updateSuggestionsList();
+                    this.moveSearchSuggestion(-1);
                     break;
                 case "ArrowDown":
                     e.preventDefault();
-                    this.selectedSuggestionIndex += 1;
-                    if (this.selectedSuggestionIndex >= this.suggestionsURLs.length)
-                        this.selectedSuggestionIndex = 0;
-                    this.updateSuggestionsList();
+                    this.moveSearchSuggestion(1);
                     break;
             }
         });
@@ -323,6 +317,16 @@ class SearchManager {
             if (!((_a = e.relatedTarget) === null || _a === void 0 ? void 0 : _a.classList.contains("delete-search-btn")))
                 this.showSearchPanel(false);
         });
+    }
+    moveSearchSuggestion(dir) {
+        var _a;
+        this.selectedSuggestionIndex += dir;
+        if (this.selectedSuggestionIndex < 0)
+            this.selectedSuggestionIndex = this.suggestionsURLs.length - 1;
+        if (this.selectedSuggestionIndex >= this.suggestionsURLs.length)
+            this.selectedSuggestionIndex = 0;
+        this.searchSuggestionsList.querySelectorAll(".suggestion").forEach((suggestion) => suggestion.classList.remove("active"));
+        (_a = this.searchSuggestionsList.querySelectorAll(".suggestion")[this.selectedSuggestionIndex]) === null || _a === void 0 ? void 0 : _a.classList.add("active");
     }
     handleSearch(query) {
         const gLinkRegex = /^-(\w+)\s*(.*)$/;
@@ -392,7 +396,7 @@ class SearchManager {
             suggestion.className = "suggestion";
             suggestion.innerHTML = `
                     <div class="left">
-                        <img src="http://www.google.com/s2/favicons?sz=32&domain=${elem.url}" class="tab-image"></img> 
+                        <img src="http://www.google.com/s2/favicons?sz=32&domain=${elem.url}" class="tab-image" onerror="this.onerror=null;this.src='https://www.google.com/favicon.ico';"></img> 
                         <p>${escapeHTML(elem.title)}</p>
                     </div>
                     <div class="center">
@@ -547,6 +551,10 @@ class TabsManager {
         };
         if (tabUrl.startsWith("gh3b://")) {
             const param = tabUrl.split("://")[1];
+            if (this.getTab(param)) {
+                this.switchTab(param);
+                return;
+            }
             switch (param) {
                 case "history":
                     const historyTab = {
@@ -582,20 +590,21 @@ class TabsManager {
                     this.switchTab("glinks");
                     this.updateTabsList();
                     return gLinksTab;
-                case "auth/email-verify":
+                case "auth":
                     const authTab = {
-                        id: "auth/email-verify",
-                        title: "Verifica Email",
+                        id: "auth",
+                        title: "Gh3 Auth",
                         url: tabUrl,
                         visible,
                         icon: "https://www.google.com/favicon.ico",
                         webview: undefined,
                         loaded: false,
                     };
+                    AuthManager.instance.showAuthPanel(true);
                     this.tabs.push(authTab);
                     if (!open)
                         return authTab;
-                    this.switchTab("auth/email-verify");
+                    this.switchTab("auth");
                     this.updateTabsList();
                     return authTab;
                 default:
@@ -739,6 +748,9 @@ class TabsManager {
             case "glinks":
                 GLinksManager.instance.showGLinksPanel(false);
                 break;
+            case "auth":
+                AuthManager.instance.showAuthPanel(false);
+                break;
             default:
                 break;
         }
@@ -775,6 +787,7 @@ class TabsManager {
             this.tabs.forEach((tab) => { var _a; return (_a = tab.webview) === null || _a === void 0 ? void 0 : _a.classList.remove("active"); });
             this.urlBar.value = "";
             this.updateTabsList();
+            AuthManager.instance.showAuthPanel(false);
             GLinksManager.instance.showGLinksPanel(false);
             HistoryManager.instance.showHistoryPanel(false);
             return;
@@ -799,6 +812,7 @@ class TabsManager {
             this.activeTabIndex = this.tabs.indexOf(tab);
         }
         this.activeTabId = id;
+        AuthManager.instance.showAuthPanel(false);
         GLinksManager.instance.showGLinksPanel(false);
         HistoryManager.instance.showHistoryPanel(false);
         switch (tab.id) {
@@ -807,6 +821,9 @@ class TabsManager {
                 break;
             case "glinks":
                 GLinksManager.instance.showGLinksPanel(true);
+                break;
+            case "auth":
+                AuthManager.instance.showAuthPanel(true);
                 break;
         }
         this.tabs.forEach((tab) => { var _a; return (_a = tab.webview) === null || _a === void 0 ? void 0 : _a.classList.toggle("active", tab.id === id); });
@@ -850,12 +867,69 @@ class TabsManager {
     }
 }
 class AuthManager {
+    constructor(authPanel, emailLogin, emailInput, passwordInput, googleLogin, githubLogin, anonymousLogin) {
+        if (AuthManager.instance)
+            throw new Error("Singleton Error: Class already instantiated!");
+        AuthManager.instance = this;
+        this.authPanel = authPanel;
+        this.emailLogin = emailLogin;
+        this.googleLogin = googleLogin;
+        this.githubLogin = githubLogin;
+        this.anonymousLogin = anonymousLogin;
+        this.emailInput = emailInput;
+        this.passwordInput = passwordInput;
+        this.setupEventListeners();
+    }
+    setupEventListeners() {
+        this.emailLogin.addEventListener("click", () => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const result = yield window.auth.loginWithEmail(this.emailInput.value, this.passwordInput.value);
+                console.log(result);
+            }
+            catch (e) {
+                console.error(e.message);
+            }
+        }));
+        this.googleLogin.addEventListener("click", () => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const result = yield window.auth.loginWithGoogle();
+                console.log(result);
+            }
+            catch (e) {
+                console.error(e.message);
+            }
+        }));
+        this.githubLogin.addEventListener("click", () => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const result = yield window.auth.loginWithGithub();
+                console.log(result);
+            }
+            catch (e) {
+                console.error(e.message);
+            }
+        }));
+        this.anonymousLogin.addEventListener("click", () => __awaiter(this, void 0, void 0, function* () {
+            try {
+                const result = yield window.auth.loginAnonymously();
+                if (result) {
+                    localStorage.setItem("accessToken", result.session.accessToken);
+                }
+            }
+            catch (e) {
+                console.error(e.message);
+            }
+        }));
+    }
+    showAuthPanel(active) {
+        this.authPanel.classList.toggle("active", active);
+    }
 }
 class Browser {
     constructor() {
         new GLinksManager(JSON.parse(localStorage.getItem("userGLinks") || "{}"), document.getElementById("glinks-panel"), document.getElementById("default-glinks"), document.getElementById("custom-glinks"));
         new PopupManager(document.getElementById("popup-panel"), document.getElementById("popup-content"), document.getElementById("popup-error"), document.getElementById("popup-title"), document.getElementById("popup-cancel"), document.getElementById("popup-confirm"));
         new HistoryManager(JSON.parse(localStorage.getItem("history") || "[]"), document.getElementById("history-panel"), document.getElementById("history-list"), document.getElementById("history-search"));
+        new AuthManager(document.getElementById("auth-panel"), document.getElementById("email-login"), document.getElementById("email-input"), document.getElementById("password-input"), document.getElementById("google-login"), document.getElementById("github-login"), document.getElementById("anonymous-login"));
         new TabsManager(localStorage.getItem("activeTab") || TabsManager.instance.getTabs()[0].id, document.getElementById("browser-container"), document.getElementById("sidebar"), document.getElementById("tab-list"), document.getElementById("bg-title"), document.getElementById("url-bar"), document.getElementById("back"), document.getElementById("forward"), document.getElementById("reload"), document.getElementById("new-tab"));
         new SearchManager(document.getElementById("search-float"), document.getElementById("search-suggestions"), document.getElementById("search-input"));
         this.loadBrowser();
@@ -896,6 +970,7 @@ class Browser {
 let browser;
 window.electron.closeActiveTab(() => TabsManager.instance.closeTab(TabsManager.instance.getActiveTab().id));
 window.electron.changeActiveTab((dir) => TabsManager.instance.switchTab(TabsManager.instance.getActiveTabIndex() + dir));
+window.electron.openNewTab((url) => TabsManager.instance.createTab(url));
 window.electron.openSearchBar(() => SearchManager.instance.showSearchPanel(true));
 window.electron.toggleFloatingSidebar(() => TabsManager.instance.toggleSidebar());
 window.electron.openHistoryPanel(() => HistoryManager.instance.openHistory());

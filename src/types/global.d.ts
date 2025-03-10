@@ -1,3 +1,6 @@
+import { FirebaseUser } from "../auth/firebase";
+import { User } from "firebase/auth";
+
 export {};
 
 declare global {
@@ -5,6 +8,8 @@ declare global {
         electron: {
             closeActiveTab: (callback: () => void) => void;
             changeActiveTab: (callback: (dir: number) => void) => void;
+            openNewTab: (callback: (url: string) => void) => void;
+
             openSearchBar: (callback: () => void) => void;
             toggleFloatingSidebar: (callback: () => void) => void;
             focusUrlBar: (callback: () => void) => void;
@@ -32,10 +37,10 @@ declare global {
         };
 
         auth: {
-            loginWithEmail: (email: string, password: string) => void;
-            loginWithGoogle: () => void;
-            loginWithGithub: () => void;
-            loginAnonymously: () => void;
+            loginWithEmail: (email: string, password: string) => Promise<FirebaseUser>;
+            loginWithGoogle: () => Promise<FirebaseUser>;
+            loginWithGithub: () => Promise<FirebaseUser>;
+            loginAnonymously: () => Promise<FirebaseUser>;
         };
     }
 }

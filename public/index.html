@@ -34,7 +34,10 @@
                 <input type="text" id="url-bar" placeholder="Cerca o inserisci URL..." readonly />
             </div>
             <div id="tab-list"></div>
-            <button id="new-tab"><i class="fa fa-plus"></i></button>
+            <div class="buttons">
+                <button id="new-tab"><i class="fa fa-plus"></i></button>
+                <button id="account-btn"><i class="fa fa-user"></i></button>
+            </div>
         </div>
         <div id="browser-container">
             <div id="bg-title">
@@ -74,19 +77,33 @@
                     <div class="glinks-group" id="custom-glinks"></div>
                 </ul>
             </div>
-            <div id="auth-panel" class="active">
+            <div id="auth-panel">
                 <div class="panel-header">
                     <h2>Accedi a Gh3B</h2>
                 </div>
-                <input type="email" id="email" placeholder="Inserisci l'email...">
-                <input type="password" id="password" placeholder="Inserisci la password...">
-                <button id="email-login">Accedi</button>
-
-                <div class="separator">oppure</div>
-
-                <button id="google-login" class="oauth-btn google">Accedi con Google</button>
-                <button id="github-login" class="oauth-btn github">Accedi con GitHub</button>
-                <button id="anonymous-login" class="oauth-btn anon">Accedi in anonimo</button>
+                <div class="panel-content">
+                    <!--<div class="login-type">
+                        <h2 class="login-title">Email / Password</h2>
+                        <label for="email-input">Email</label>
+                        <input type="email" id="email-input" placeholder="Inserisci l'email...">
+                        <label for="password-input">Password</label>
+                        <input type="password" id="password-input" placeholder="Inserisci la password...">
+                        <button id="email-login" class="btn">Accedi</button>
+                    </div>-->
+                    <div class="login-type">
+                        <h2 class="login-title">Google</h2>
+                        <button id="mailpass-login" class="btn">Accedi con Email/Password</button>
+                    </div>
+                    <div class="separator">oppure</div>
+                    <div class="login-type">
+                        <h2 class="login-title">Google</h2>
+                        <button id="google-login" class="btn google">Accedi con Google</button>
+                    </div>
+                    <div class="login-type">
+                        <h2 class="login-title">GitHub</h2>
+                        <button id="github-login" class="btn github">Accedi con GitHub</button>
+                    </div>
+                </div>
             </div>
         </div>
         <div id="search-float">
@@ -96,7 +113,7 @@
         </div>
     </div>
 
-    <script type="module" src="../dist/renderer/renderer.js"></script>
+    <script type="module" src="../renderer/renderer.js"></script>
 </body>
 
 </html>

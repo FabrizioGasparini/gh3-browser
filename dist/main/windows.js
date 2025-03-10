@@ -19,7 +19,28 @@ function createMainWindow() {
         },
         titleBarStyle: "hidden",
     });
+    mainWindow.webContents.on("before-input-event", (event, input) => {
+        switch (input.key.toLowerCase()) {
+            case "f4":
+                if (input.alt && process.platform !== "darwin")
+                    electron_1.app.quit();
+                break;
+            case "f12":
+                event.preventDefault();
+                mainWindow.webContents.send("toggle-devtools");
+                break;
+            default:
+                break;
+        }
+        mainWindow.webContents.setIgnoreMenuShortcuts(true);
+    });
+    mainWindow.webContents.on("did-attach-webview", (_, contents) => {
+        contents.setWindowOpenHandler((details) => {
+            mainWindow.webContents.send("open-popup", details);
+            return { action: "deny" };
+        });
+    });
     mainWindow.setMenu(null);
-    mainWindow.loadFile(path_1.default.join(__dirname, "../../src/index.html"));
+    mainWindow.loadFile(path_1.default.join(__dirname, "../public/index.html"));
     return mainWindow;
 }

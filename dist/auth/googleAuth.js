@@ -11,11 +11,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.loginWithGoogle = void 0;
 const auth_1 = require("firebase/auth");
-const loginWithGoogle = (auth) => __awaiter(void 0, void 0, void 0, function* () {
+const loginWithGoogle = (mainWindow, auth) => __awaiter(void 0, void 0, void 0, function* () {
     const provider = new auth_1.GoogleAuthProvider();
     try {
-        const userCredential = yield (0, auth_1.signInWithPopup)(auth, provider);
-        return userCredential.user;
+        const userCredential = yield (0, auth_1.signInWithRedirect)(auth, provider);
+        console.log(userCredential);
+        return userCredential;
     }
     catch (error) {
         console.error("Errore login Google:", error);

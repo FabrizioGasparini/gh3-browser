@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "main": "src/main.ts",
     "scripts": {
-        "start": "clear && tsc &&  ncp ./public ./dist/public && electron ./dist/main/main.js",
+        "start": "clear && tsc && electron ./dist/main/main.js",
         "build": "tsc"
     },
     "keywords": [],
@@ -19,12 +19,10 @@
         "@types/electron": "^1.4.38",
         "@types/node": "^22.13.0",
         "electron": "^34.0.2",
-        "ncp": "^2.0.0",
         "typescript": "^5.7.3"
     },
     "dependencies": {
         "dotenv": "^16.4.7",
-        "firebase": "^11.4.0",
-        "openid-client": "^6.3.3"
+        "firebase": "^11.4.0"
     }
 }

@@ -24,19 +24,33 @@ const firebaseConfig = {
     appId: "1:1072198874421:web:788ff6e3d59dcdde09487c",
     measurementId: "G-JL59YDBJZ7",
 };
-function initFirebase() {
+function createAuthWindow(mainWindow) {
+    let authWindow = new electron_1.BrowserWindow({
+        width: 400,
+        height: 600,
+        frame: false,
+        parent: mainWindow,
+        modal: true,
+        show: false,
+    });
+    authWindow.once("ready-to-show", () => {
+        authWindow.show();
+    });
+}
+function initFirebase(mainWindow) {
     const app = (0, app_1.initializeApp)(firebaseConfig);
     const auth = (0, auth_1.getAuth)(app);
     electron_1.ipcMain.handle("login:email", (_, email, password) => __awaiter(this, void 0, void 0, function* () {
-        authManager_1.AuthManager.loginWithEmail(auth, email, password);
+        return authManager_1.AuthManager.loginWithEmail(auth, email, password);
     }));
     electron_1.ipcMain.handle("login:google", () => __awaiter(this, void 0, void 0, function* () {
-        authManager_1.AuthManager.loginWithGoogle(auth);
+        createAuthWindow(mainWindow);
+        return authManager_1.AuthManager.loginWithGoogle(mainWindow, auth);
     }));
     electron_1.ipcMain.handle("login:github", () => __awaiter(this, void 0, void 0, function* () {
-        authManager_1.AuthManager.loginWithGithub(auth);
+        return authManager_1.AuthManager.loginWithGithub(auth);
     }));
     electron_1.ipcMain.handle("login:anonymous", () => __awaiter(this, void 0, void 0, function* () {
-        authManager_1.AuthManager.loginAnonymously(auth);
+        return authManager_1.AuthManager.loginAnonymously(auth);
     }));
 }

@@ -1,0 +1,61 @@
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+:root {
+    --primary-color: #5e2a84;
+    --primary-hover: #3f51b5;
+    --background-color: #181818;
+    --secondary-color: #1e1e1e;
+    --text-color: #eaeaea;
+    --text-muted: #aaa;
+    --button-hover: #404040;
+    --close-hover: #ff0000;
+    --border-color: #333;
+    --input-background: #222;
+    --scrollbar-track: #888;
+}
+
+html, body {
+    height: 100%;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background-color: var(--background-color);
+}
+
+body {
+    color: var(--text-color);
+    width: 100%;
+    max-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+#bg-title {
+    display: block;
+}
+#bg-title h1{
+    font-size: 64px;
+    font-weight: 500;
+    text-align: center;
+}
+#bg-title h2{
+    font-size: 26px;
+    font-weight: 200;
+    text-align: center;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
+#bg-title p{
+    font-size: 14px;
+    font-weight: 100;
+    text-align: center;
+    color: #505050;
+}
